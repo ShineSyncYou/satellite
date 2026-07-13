@@ -10,6 +10,16 @@ import Database from "better-sqlite3";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROJECT_ROOT = path.resolve(__dirname, "..");
+
+// Vite loads .env for the browser build, but this standalone Node service does
+// not. Load it here as well so `npm run server` and `npm run dev:all` share the
+// same local configuration. Existing process environment variables still take
+// precedence, which keeps deployment-time configuration authoritative.
+const ENV_FILE_PATH = path.join(PROJECT_ROOT, ".env");
+if (existsSync(ENV_FILE_PATH)) {
+  process.loadEnvFile(ENV_FILE_PATH);
+}
+
 const WORKSPACE_ROOT = path.resolve(PROJECT_ROOT, "..", "..");
 const DEFAULT_SATSIM_ROOT = existsSync(path.join(WORKSPACE_ROOT, "satsim"))
   ? path.join(WORKSPACE_ROOT, "satsim")
