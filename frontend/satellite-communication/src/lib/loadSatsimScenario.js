@@ -96,10 +96,10 @@ function ensureLoadedData(source, label) {
 
 function isValidBundlePayload(value) {
   return Boolean(
-    value
-    && typeof value === "object"
-    && value.metadata
-    && Array.isArray(value.node_tracks),
+      value
+      && typeof value === "object"
+      && value.metadata
+      && Array.isArray(value.node_tracks),
   );
 }
 
@@ -139,9 +139,9 @@ function toNodeTypeMap(nodeTracks) {
  */
 function limitedIds(nodeTracks, nodeType, maxCount) {
   const ids = (nodeTracks || [])
-    .filter((track) => track.type === nodeType)
-    .map((track) => track.id)
-    .sort((left, right) => left.localeCompare(right));
+      .filter((track) => track.type === nodeType)
+      .map((track) => track.id)
+      .sort((left, right) => left.localeCompare(right));
 
   if (typeof maxCount === "number" && maxCount >= 0) {
     return ids.slice(0, maxCount);
@@ -162,7 +162,7 @@ function buildVisibleNodeIds(nodeTracks, { maxAircraft, maxGroundStations }) {
 
 function sortByRelativeTime(items) {
   return [...(items || [])].sort(
-    (left, right) => Number(left.relative_time_s) - Number(right.relative_time_s),
+      (left, right) => Number(left.relative_time_s) - Number(right.relative_time_s),
   );
 }
 
@@ -172,11 +172,11 @@ function normalizeBundle(bundle, options) {
   const nodeTypeMap = toNodeTypeMap(nodeTracks);
   const visibleNodeIds = buildVisibleNodeIds(nodeTracks, options);
   const satelliteIds = nodeTracks
-    .filter((track) => track.type === "satellite" && visibleNodeIds.has(track.id))
-    .map((track) => track.id);
+      .filter((track) => track.type === "satellite" && visibleNodeIds.has(track.id))
+      .map((track) => track.id);
   const groundStationIds = nodeTracks
-    .filter((track) => track.type === "ground_station" && visibleNodeIds.has(track.id))
-    .map((track) => track.id);
+      .filter((track) => track.type === "ground_station" && visibleNodeIds.has(track.id))
+      .map((track) => track.id);
 
   return {
     ...bundle,
@@ -206,9 +206,9 @@ function applyViewerClock(viewer, dataSource, bundle, playbackMultiplier) {
 
   const startTime = Cesium.JulianDate.fromIso8601(bundle.metadata.start_time);
   const stopTime = Cesium.JulianDate.addSeconds(
-    startTime,
-    Number(bundle.metadata.duration_s),
-    new Cesium.JulianDate(),
+      startTime,
+      Number(bundle.metadata.duration_s),
+      new Cesium.JulianDate(),
   );
 
   viewer.clock.startTime = cloneTime(startTime);
@@ -259,7 +259,7 @@ function applySatelliteModel(entity, options) {
   entity.model.silhouetteColor = new Cesium.ConstantProperty(SATELLITE_MODEL_SILHOUETTE_COLOR);
   entity.model.silhouetteSize = new Cesium.ConstantProperty(1.1);
   entity.model.distanceDisplayCondition = new Cesium.ConstantProperty(
-    new Cesium.DistanceDisplayCondition(0, options.satelliteModelMaxViewDistance),
+      new Cesium.DistanceDisplayCondition(0, options.satelliteModelMaxViewDistance),
   );
   entity.model.show = new Cesium.ConstantProperty(true);
 }
@@ -297,8 +297,8 @@ function styleEntities(dataSource, bundle, options) {
         applySatelliteModel(entity, {
           ...options,
           satelliteModelMaxViewDistance: isGeoSatelliteId(entity.id)
-            ? Math.max(options.satelliteModelMaxViewDistance, 100000000)
-            : options.satelliteModelMaxViewDistance,
+              ? Math.max(options.satelliteModelMaxViewDistance, 100000000)
+              : options.satelliteModelMaxViewDistance,
         });
       } else {
         entity.model = undefined;
@@ -431,7 +431,7 @@ function updateSatellitePointPrimitives(primitiveLookup, trackStore, relativeTim
     // 而 Cartesian3.equals 对同一引用 (===) 直接短路返回 true，导致位置更新被跳过。
     // 先用 scratch 采样，再 clone 生成新引用触发 setter 更新。
     primitive.position = Cesium.Cartesian3.clone(
-      sampleCompactTrack(track, relativeTime, scratchSatellitePosition),
+        sampleCompactTrack(track, relativeTime, scratchSatellitePosition),
     );
     primitive.show = true;
   }
@@ -440,9 +440,9 @@ function updateSatellitePointPrimitives(primitiveLookup, trackStore, relativeTim
 function selectNearestVisibleSatelliteIds(viewer, satelliteEntities, time, maxCount) {
   const camera = viewer.camera;
   const cullingVolume = camera.frustum.computeCullingVolume(
-    camera.positionWC,
-    camera.directionWC,
-    camera.upWC,
+      camera.positionWC,
+      camera.directionWC,
+      camera.upWC,
   );
   const occluder = new Cesium.EllipsoidalOccluder(Cesium.Ellipsoid.WGS84, camera.positionWC);
   const visible = [];
@@ -484,11 +484,11 @@ function clearSatelliteModels(entityLookup, modeledSatelliteIds) {
 }
 
 function syncSatelliteModelPool({
-  entityLookup,
-  modeledSatelliteIds,
-  targetSatelliteIds,
-  styleOptions,
-}) {
+                                  entityLookup,
+                                  modeledSatelliteIds,
+                                  targetSatelliteIds,
+                                  styleOptions,
+                                }) {
   for (const satId of modeledSatelliteIds) {
     if (targetSatelliteIds.has(satId)) {
       continue;
@@ -686,8 +686,8 @@ function buildRouteSegments(activeRoutes, activeTopology, bundle) {
     segments,
     activeRouteSatelliteIds,
     signature: segments
-      .map((segment) => `${segment.source}>${segment.target}:${segment.type}:${segment.loadRatio ?? "na"}`)
-      .join(";"),
+        .map((segment) => `${segment.source}>${segment.target}:${segment.type}:${segment.loadRatio ?? "na"}`)
+        .join(";"),
   };
 }
 
@@ -806,20 +806,20 @@ function updatePolylinePrimitivePositions(pool, trackStore, entityLookup, time, 
     }
 
     const sourcePosition = resolveNodePosition(
-      trackStore,
-      entityLookup,
-      segment.source,
-      time,
-      relativeTime,
-      scratchPrimitiveSourcePosition,
+        trackStore,
+        entityLookup,
+        segment.source,
+        time,
+        relativeTime,
+        scratchPrimitiveSourcePosition,
     );
     const targetPosition = resolveNodePosition(
-      trackStore,
-      entityLookup,
-      segment.target,
-      time,
-      relativeTime,
-      scratchPrimitiveTargetPosition,
+        trackStore,
+        entityLookup,
+        segment.target,
+        time,
+        relativeTime,
+        scratchPrimitiveTargetPosition,
     );
 
     if (!sourcePosition || !targetPosition) {
@@ -912,11 +912,11 @@ function computeElevationDeg(satellitePosition, groundPosition) {
 function getSubPointOnGround(satPosition, result = new Cesium.Cartesian3()) {
   const cartographic = Cesium.Ellipsoid.WGS84.cartesianToCartographic(satPosition);
   return Cesium.Cartesian3.fromRadians(
-    cartographic.longitude,
-    cartographic.latitude,
-    0,
-    Cesium.Ellipsoid.WGS84,
-    result,
+      cartographic.longitude,
+      cartographic.latitude,
+      0,
+      Cesium.Ellipsoid.WGS84,
+      result,
   );
 }
 
@@ -962,8 +962,8 @@ function honeycombCellCountForAccess(satellitePosition, groundPosition) {
 
 function satelliteCoverageHalfAngleRad(satelliteId) {
   return String(satelliteId || "").startsWith("sat_geo_")
-    ? GEO_COVERAGE_HALF_ANGLE_RAD
-    : DEFAULT_COVERAGE_HALF_ANGLE_RAD;
+      ? GEO_COVERAGE_HALF_ANGLE_RAD
+      : DEFAULT_COVERAGE_HALF_ANGLE_RAD;
 }
 
 function isGeoSatelliteId(satelliteId) {
@@ -1033,9 +1033,9 @@ function quaternionFromDirection(direction, result = new Cesium.Quaternion()) {
   Cesium.Cartesian3.normalize(scratchYAxis, scratchYAxis);
 
   const rotation = new Cesium.Matrix3(
-    scratchXAxis.x, scratchYAxis.x, scratchZAxis.x,
-    scratchXAxis.y, scratchYAxis.y, scratchZAxis.y,
-    scratchXAxis.z, scratchYAxis.z, scratchZAxis.z,
+      scratchXAxis.x, scratchYAxis.x, scratchZAxis.x,
+      scratchXAxis.y, scratchYAxis.y, scratchZAxis.y,
+      scratchXAxis.z, scratchYAxis.z, scratchZAxis.z,
   );
   return Cesium.Quaternion.fromRotationMatrix(rotation, result);
 }
@@ -1065,9 +1065,9 @@ function buildCompactTrackStore(bundle) {
     for (let index = 0; index < samples.length; index += 1) {
       const sample = samples[index];
       const position = Cesium.Cartesian3.fromDegrees(
-        Number(sample.lon_deg),
-        Number(sample.lat_deg),
-        Number(sample.alt_km) * 1000,
+          Number(sample.lon_deg),
+          Number(sample.lat_deg),
+          Number(sample.alt_km) * 1000,
       );
       times[index] = Number(sample.relative_time_s);
       positions[index * 3] = position.x;
@@ -1162,9 +1162,9 @@ function buildHexCellHierarchy(centerPosition, bearingTargetPosition, cellOffset
     };
     const rotated = rotateLocalOffset(vertexOffset, bearingRad);
     positions.push(Cesium.Matrix4.multiplyByPoint(
-      transform,
-      new Cesium.Cartesian3(rotated.east, rotated.north, HONEYCOMB_HEIGHT_M),
-      new Cesium.Cartesian3(),
+        transform,
+        new Cesium.Cartesian3(rotated.east, rotated.north, HONEYCOMB_HEIGHT_M),
+        new Cesium.Cartesian3(),
     ));
   }
   return new Cesium.PolygonHierarchy(positions);
@@ -1263,14 +1263,14 @@ function hideCoverageCells(info) {
 }
 
 function updateCoverageVisibility({
-  coverageDataSource,
-  coverageEntities,
-  entityLookup,
-  accessLinks,
-  shownCoverageIds,
-  time,
-  showCoverage,
-}) {
+                                    coverageDataSource,
+                                    coverageEntities,
+                                    entityLookup,
+                                    accessLinks,
+                                    shownCoverageIds,
+                                    time,
+                                    showCoverage,
+                                  }) {
   if (!showCoverage) {
     for (const coverageKey of shownCoverageIds) {
       const info = coverageEntities.get(coverageKey);
@@ -1293,8 +1293,8 @@ function updateCoverageVisibility({
     const targetPosition = info.targetEntity.position.getValue(time, scratchGroundStationPosition);
     const showHoneycomb = !isGeoSatelliteId(accessLink.satId);
     const cellCount = showHoneycomb && satPosition && targetPosition
-      ? honeycombCellCountForAccess(satPosition, targetPosition)
-      : 0;
+        ? honeycombCellCountForAccess(satPosition, targetPosition)
+        : 0;
     info.cellEntities.forEach((cellEntity, index) => {
       cellEntity.show = index < cellCount;
     });
@@ -1390,9 +1390,9 @@ function advanceStateToTime(state, bundle, relativeTime, enableTopologyLinks) {
   }
 
   while (
-    state.routeIndex < bundle.routeEvents.length
-    && Number(bundle.routeEvents[state.routeIndex].relative_time_s) <= relativeTime + 1e-9
-  ) {
+      state.routeIndex < bundle.routeEvents.length
+      && Number(bundle.routeEvents[state.routeIndex].relative_time_s) <= relativeTime + 1e-9
+      ) {
     applyRouteEvent(state.activeRoutes, bundle.routeEvents[state.routeIndex]);
     routeChanged = true;
     state.routeIndex += 1;
@@ -1400,9 +1400,9 @@ function advanceStateToTime(state, bundle, relativeTime, enableTopologyLinks) {
 
   if (enableTopologyLinks) {
     while (
-      state.topologyIndex < bundle.topologyEvents.length
-      && Number(bundle.topologyEvents[state.topologyIndex].relative_time_s) <= relativeTime + 1e-9
-    ) {
+        state.topologyIndex < bundle.topologyEvents.length
+        && Number(bundle.topologyEvents[state.topologyIndex].relative_time_s) <= relativeTime + 1e-9
+        ) {
       applyTopologyEvent(state.activeTopology, bundle.topologyEvents[state.topologyIndex]);
       topologyChanged = true;
       state.topologyIndex += 1;
@@ -1451,31 +1451,31 @@ function advanceStateToTime(state, bundle, relativeTime, enableTopologyLinks) {
  * 2. bundleSource：业务逻辑文件
  */
 export async function loadSatsimScenario({
-  viewer,
-  czmlSource,
-  bundleSource,
-  miniMode = false,
-  showCoverage = true,
-  showLabels = true,
-  showSatelliteModel = true,
-  satelliteModelPoolEnabled = true,
-  satelliteModelPoolSize = 60,
-  satelliteModelEnableHeight = 12500000,
-  satelliteModelDisableHeight = 13500000,
-  satelliteModelUpdateThrottleMs = 250,
-  satelliteModelScale = 0.21,
-  satelliteModelMinPixelSize = 15,
-  satelliteModelMaximumScale = 120000,
-  satelliteModelMaxViewDistance = 32000000,
-  aircraftModelScale = 30,
-  aircraftModelMinPixelSize = 50,
-  aircraftModelMaximumScale = 50000,
-  maxAircraft = 10,
-  maxGroundStations = 1,
-  showTopologyLinks = true,
-  playbackMultiplier = 6,
-  onSimulationTick = null,
-}) {
+                                           viewer,
+                                           czmlSource,
+                                           bundleSource,
+                                           miniMode = false,
+                                           showCoverage = true,
+                                           showLabels = true,
+                                           showSatelliteModel = true,
+                                           satelliteModelPoolEnabled = true,
+                                           satelliteModelPoolSize = 60,
+                                           satelliteModelEnableHeight = 12500000,
+                                           satelliteModelDisableHeight = 13500000,
+                                           satelliteModelUpdateThrottleMs = 250,
+                                           satelliteModelScale = 0.21,
+                                           satelliteModelMinPixelSize = 15,
+                                           satelliteModelMaximumScale = 120000,
+                                           satelliteModelMaxViewDistance = 32000000,
+                                           aircraftModelScale = 30,
+                                           aircraftModelMinPixelSize = 50,
+                                           aircraftModelMaximumScale = 50000,
+                                           maxAircraft = 10,
+                                           maxGroundStations = 1,
+                                           showTopologyLinks = true,
+                                           playbackMultiplier = 6,
+                                           onSimulationTick = null,
+                                         }) {
   const czmlPayload = await ensureLoadedData(czmlSource, "CZML");
   // bundle.json 才是 topology / route / 指标的真实来源。
   const bundlePayload = await ensureLoadedData(bundleSource, "satsim bundle JSON");
@@ -1526,11 +1526,11 @@ export async function loadSatsimScenario({
   };
   const enableSatelliteModelPool = !miniMode && showSatelliteModel && satelliteModelPoolEnabled;
   const satelliteEntities = enableSatelliteModelPool
-    ? bundle.satelliteIds
-      .filter((satId) => !isGeoSatelliteId(satId))
-      .map((satId) => entityLookup.get(satId))
-      .filter((entity) => entity?.position)
-    : [];
+      ? bundle.satelliteIds
+          .filter((satId) => !isGeoSatelliteId(satId))
+          .map((satId) => entityLookup.get(satId))
+          .filter((entity) => entity?.position)
+      : [];
   const modeledSatelliteIds = new Set();
   let satelliteModelPoolActive = false;
   let lastModelPoolUpdateMs = Number.NEGATIVE_INFINITY;
@@ -1560,18 +1560,18 @@ export async function loadSatsimScenario({
     }
 
     const now = (typeof performance !== "undefined" && typeof performance.now === "function")
-      ? performance.now()
-      : Date.now();
+        ? performance.now()
+        : Date.now();
     if (!force && (now - lastModelPoolUpdateMs) < Number(satelliteModelUpdateThrottleMs)) {
       return;
     }
     lastModelPoolUpdateMs = now;
 
     const targetSatelliteIds = selectNearestVisibleSatelliteIds(
-      viewer,
-      satelliteEntities,
-      time,
-      satelliteModelPoolSize,
+        viewer,
+        satelliteEntities,
+        time,
+        satelliteModelPoolSize,
     );
     syncSatelliteModelPool({
       entityLookup,
@@ -1587,17 +1587,17 @@ export async function loadSatsimScenario({
     updateSatellitePointPrimitives(satellitePrimitives.lookup, trackStore, relativeTime);
 
     const { routeChanged, topologyChanged } = advanceStateToTime(
-      incrementalState,
-      bundle,
-      relativeTime,
-      showTopologyLinks && !miniMode,
+        incrementalState,
+        bundle,
+        relativeTime,
+        showTopologyLinks && !miniMode,
     );
 
     if (routeChanged || topologyChanged || lastRouteSignature === "") {
       const routeState = buildRouteSegments(
-        incrementalState.activeRoutes,
-        incrementalState.activeTopology,
-        bundle,
+          incrementalState.activeRoutes,
+          incrementalState.activeTopology,
+          bundle,
       );
       if (routeState.signature !== lastRouteSignature) {
         syncPolylinePrimitivePool(routePolylineCollection, routePolylinePool, routeState.segments, {
@@ -1605,10 +1605,10 @@ export async function loadSatsimScenario({
           widthResolver: (segment) => routeSegmentWidth(segment),
         });
         applySatelliteActivityStyles(
-          entityLookup,
-          satellitePrimitives.lookup,
-          activeRouteSatelliteIds,
-          routeState.activeRouteSatelliteIds,
+            entityLookup,
+            satellitePrimitives.lookup,
+            activeRouteSatelliteIds,
+            routeState.activeRouteSatelliteIds,
         );
 
         activeRouteSatelliteIds.clear();
