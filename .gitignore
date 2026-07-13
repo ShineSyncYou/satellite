@@ -1,0 +1,31 @@
+# Track only frontend source from this repository root.
+/*
+
+!/.gitignore
+!/frontend/
+!/frontend/**
+
+# Keep local/frontend generated files out of Git.
+frontend/**/node_modules/
+frontend/**/dist/
+frontend/**/dist-ssr/
+frontend/**/coverage/
+frontend/**/.generated-simulations/
+frontend/**/public/cesium/
+frontend/**/public/pictures/
+frontend/**/.env
+frontend/**/.env.*
+!frontend/**/.env.example
+frontend/**/*.local
+frontend/**/*.log
+frontend/**/*.err
+frontend/**/*.tsbuildinfo
+frontend/**/.eslintcache
+frontend/**/*.timestamp-*-*.mjs
+
+# Editor / OS files under frontend.
+frontend/**/.DS_Store
+frontend/**/Thumbs.db
+frontend/**/.idea/
+frontend/**/.vscode/*
+!frontend/**/.vscode/extensions.json

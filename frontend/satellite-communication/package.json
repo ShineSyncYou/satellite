@@ -1,0 +1,32 @@
+{
+  "name": "satellite-communication-system",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:all": "node scripts/dev-all.mjs",
+    "server": "node server/index.mjs",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@google/model-viewer": "^4.2.0",
+    "better-sqlite3": "^12.10.0",
+    "cesium": "^1.139.1",
+    "echarts": "^6.0.0",
+    "three": "^0.182.0",
+    "vue": "^3.5.29",
+    "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.4",
+    "vite": "^7.3.1",
+    "vite-plugin-cesium": "^1.2.23",
+    "vite-plugin-compression": "^0.5.1",
+    "vite-plugin-vue-devtools": "^8.0.6"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  }
+}
