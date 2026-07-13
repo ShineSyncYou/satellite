@@ -41,6 +41,12 @@ const COVERAGE_COLOR = Cesium.Color.fromCssColorString("#4ea9ff").withAlpha(0.12
 const COVERAGE_OUTLINE_COLOR = Cesium.Color.fromCssColorString("#e8f7ff").withAlpha(0.52);
 const DEFAULT_COVERAGE_HALF_ANGLE_RAD = Cesium.Math.toRadians(24);
 const GEO_COVERAGE_HALF_ANGLE_RAD = Cesium.Math.toRadians(8);
+// 高轨波束渲染模式：
+// true  = 使用单 Primitive 自定义网格，真实贴地锥面，效果更准确；
+// false = 使用现有 cylinder 轻量圆锥，性能最稳但只是视觉近似。
+const USE_GEO_BEAM_PRIMITIVE = true;
+const GEO_BEAM_SEGMENT_COUNT = 48;
+const GEO_BEAM_UPDATE_INTERVAL_MS = 500;
 const HONEYCOMB_CELL_RADIUS_M = 70000;
 const HONEYCOMB_HEIGHT_M = 900;
 const HONEYCOMB_OFFSETS = Object.freeze(buildHoneycombOffsets(3));
@@ -980,6 +986,156 @@ function computeBeamFootprintRadius(satellitePosition, satelliteId = "") {
   return Math.max(rawRadius, HONEYCOMB_CELL_RADIUS_M * 3);
 }
 
+function buildGeoBeamBasis(satellitePosition) {
+  const footprintPosition = getSubPointOnGround(satellitePosition, new Cesium.Cartesian3());
+  const centerDirection = Cesium.Cartesian3.subtract(footprintPosition, satellitePosition, new Cesium.Cartesian3());
+  Cesium.Cartesian3.normalize(centerDirection, centerDirection);
+
+  let axisX = Cesium.Cartesian3.cross(centerDirection, Cesium.Cartesian3.UNIT_Z, new Cesium.Cartesian3());
+  if (Cesium.Cartesian3.magnitudeSquared(axisX) < 1e-6) {
+    axisX = Cesium.Cartesian3.cross(centerDirection, Cesium.Cartesian3.UNIT_X, axisX);
+  }
+  Cesium.Cartesian3.normalize(axisX, axisX);
+
+  const axisY = Cesium.Cartesian3.cross(axisX, centerDirection, new Cesium.Cartesian3());
+  Cesium.Cartesian3.normalize(axisY, axisY);
+
+  return { centerDirection, axisX, axisY };
+}
+
+function computeGeoBeamDirection(basis, angleRad, halfAngleRad) {
+  const ringDirection = Cesium.Cartesian3.add(
+    Cesium.Cartesian3.multiplyByScalar(basis.axisX, Math.cos(angleRad), new Cesium.Cartesian3()),
+    Cesium.Cartesian3.multiplyByScalar(basis.axisY, Math.sin(angleRad), new Cesium.Cartesian3()),
+    new Cesium.Cartesian3(),
+  );
+  const direction = Cesium.Cartesian3.add(
+    Cesium.Cartesian3.multiplyByScalar(basis.centerDirection, Math.cos(halfAngleRad), new Cesium.Cartesian3()),
+    Cesium.Cartesian3.multiplyByScalar(ringDirection, Math.sin(halfAngleRad), ringDirection),
+    new Cesium.Cartesian3(),
+  );
+  return Cesium.Cartesian3.normalize(direction, direction);
+}
+
+function intersectGeoBeamWithEarth(satellitePosition, direction) {
+  const ray = new Cesium.Ray(satellitePosition, direction);
+  const interval = Cesium.IntersectionTests.rayEllipsoid(ray, Cesium.Ellipsoid.WGS84);
+  if (!interval) {
+    return null;
+  }
+
+  const distance = interval.start >= 0 ? interval.start : interval.stop;
+  if (!Number.isFinite(distance) || distance < 0) {
+    return null;
+  }
+
+  return Cesium.Ray.getPoint(ray, distance, new Cesium.Cartesian3());
+}
+
+function buildGeoBeamPrimitive(satellitePosition, satelliteId) {
+  if (!satellitePosition) {
+    return null;
+  }
+
+  const basis = buildGeoBeamBasis(satellitePosition);
+  const halfAngleRad = satelliteCoverageHalfAngleRad(satelliteId);
+  const footprintPoints = [];
+  for (let index = 0; index < GEO_BEAM_SEGMENT_COUNT; index += 1) {
+    const angleRad = (Cesium.Math.TWO_PI * index) / GEO_BEAM_SEGMENT_COUNT;
+    const direction = computeGeoBeamDirection(basis, angleRad, halfAngleRad);
+    const point = intersectGeoBeamWithEarth(satellitePosition, direction);
+    if (point) {
+      footprintPoints.push(point);
+    }
+  }
+
+  if (footprintPoints.length < 3) {
+    return null;
+  }
+
+  const vertexCount = footprintPoints.length + 1;
+  const positions = new Float64Array(vertexCount * 3);
+  positions[0] = satellitePosition.x;
+  positions[1] = satellitePosition.y;
+  positions[2] = satellitePosition.z;
+  footprintPoints.forEach((point, index) => {
+    const offset = (index + 1) * 3;
+    positions[offset] = point.x;
+    positions[offset + 1] = point.y;
+    positions[offset + 2] = point.z;
+  });
+
+  const indices = new Uint16Array(footprintPoints.length * 3);
+  for (let index = 0; index < footprintPoints.length; index += 1) {
+    const offset = index * 3;
+    indices[offset] = 0;
+    indices[offset + 1] = index + 1;
+    indices[offset + 2] = ((index + 1) % footprintPoints.length) + 1;
+  }
+
+  const geometry = new Cesium.Geometry({
+    attributes: {
+      position: new Cesium.GeometryAttribute({
+        componentDatatype: Cesium.ComponentDatatype.DOUBLE,
+        componentsPerAttribute: 3,
+        values: positions,
+      }),
+    },
+    indices,
+    primitiveType: Cesium.PrimitiveType.TRIANGLES,
+    boundingSphere: Cesium.BoundingSphere.fromVertices(positions),
+  });
+
+  return new Cesium.Primitive({
+    geometryInstances: new Cesium.GeometryInstance({
+      geometry,
+      attributes: {
+        color: Cesium.ColorGeometryInstanceAttribute.fromColor(COVERAGE_BEAM_COLOR),
+      },
+    }),
+    appearance: new Cesium.PerInstanceColorAppearance({
+      flat: true,
+      translucent: true,
+      closed: false,
+    }),
+    asynchronous: false,
+  });
+}
+
+function removeGeoBeamPrimitive(info, coveragePrimitiveCollection) {
+  if (!info.geoBeamPrimitive) {
+    return;
+  }
+  coveragePrimitiveCollection.remove(info.geoBeamPrimitive);
+  info.geoBeamPrimitive = null;
+  info.geoBeamLastUpdateMs = Number.NEGATIVE_INFINITY;
+}
+
+function syncGeoBeamPrimitive(info, coveragePrimitiveCollection, satellitePosition, satelliteId) {
+  if (!satellitePosition) {
+    removeGeoBeamPrimitive(info, coveragePrimitiveCollection);
+    return false;
+  }
+
+  const now = (typeof performance !== "undefined" && typeof performance.now === "function")
+    ? performance.now()
+    : Date.now();
+  if (info.geoBeamPrimitive && (now - info.geoBeamLastUpdateMs) < GEO_BEAM_UPDATE_INTERVAL_MS) {
+    info.geoBeamPrimitive.show = true;
+    return true;
+  }
+
+  const nextPrimitive = buildGeoBeamPrimitive(satellitePosition, satelliteId);
+  removeGeoBeamPrimitive(info, coveragePrimitiveCollection);
+  if (!nextPrimitive) {
+    return false;
+  }
+
+  info.geoBeamPrimitive = coveragePrimitiveCollection.add(nextPrimitive);
+  info.geoBeamLastUpdateMs = now;
+  return true;
+}
+
 function buildHoneycombRing(radius) {
   const results = [];
   for (let q = -radius; q <= radius; q += 1) {
@@ -1182,7 +1338,8 @@ function ensureCoverageEntity(coverageDataSource, entityLookup, coverageEntities
     return null;
   }
 
-  const beamEntity = coverageDataSource.entities.add({
+  const useGeoBeamPrimitive = USE_GEO_BEAM_PRIMITIVE && isGeoSatelliteId(accessLink.satId);
+  const beamEntity = useGeoBeamPrimitive ? null : coverageDataSource.entities.add({
     id: `coverage-beam:${coverageKey}`,
     show: false,
     position: new Cesium.CallbackProperty((time, result) => {
@@ -1228,7 +1385,7 @@ function ensureCoverageEntity(coverageDataSource, entityLookup, coverageEntities
     },
   });
 
-  const cellEntities = HONEYCOMB_OFFSETS.map((cellOffset, index) => coverageDataSource.entities.add({
+  const cellEntities = isGeoSatelliteId(accessLink.satId) ? [] : HONEYCOMB_OFFSETS.map((cellOffset, index) => coverageDataSource.entities.add({
     id: `coverage:${coverageKey}:${index}`,
     show: false,
     polygon: {
@@ -1250,13 +1407,24 @@ function ensureCoverageEntity(coverageDataSource, entityLookup, coverageEntities
     },
   }));
 
-  const value = { beamEntity, cellEntities, satEntity, targetEntity };
+  const value = {
+    beamEntity,
+    cellEntities,
+    satEntity,
+    targetEntity,
+    useGeoBeamPrimitive,
+    geoBeamPrimitive: null,
+    geoBeamLastUpdateMs: Number.NEGATIVE_INFINITY,
+  };
   coverageEntities.set(coverageKey, value);
   return value;
 }
 
-function hideCoverageCells(info) {
-  info.beamEntity.show = false;
+function hideCoverageCells(info, coveragePrimitiveCollection) {
+  if (info.beamEntity) {
+    info.beamEntity.show = false;
+  }
+  removeGeoBeamPrimitive(info, coveragePrimitiveCollection);
   for (const cellEntity of info.cellEntities) {
     cellEntity.show = false;
   }
@@ -1264,6 +1432,7 @@ function hideCoverageCells(info) {
 
 function updateCoverageVisibility({
   coverageDataSource,
+  coveragePrimitiveCollection,
   coverageEntities,
   entityLookup,
   accessLinks,
@@ -1275,7 +1444,7 @@ function updateCoverageVisibility({
     for (const coverageKey of shownCoverageIds) {
       const info = coverageEntities.get(coverageKey);
       if (info) {
-        hideCoverageCells(info);
+        hideCoverageCells(info, coveragePrimitiveCollection);
       }
     }
     shownCoverageIds.clear();
@@ -1299,8 +1468,23 @@ function updateCoverageVisibility({
       cellEntity.show = index < cellCount;
     });
     const shouldShowBeam = Boolean(satPosition && targetPosition && (showHoneycomb ? cellCount > 0 : true));
-    info.beamEntity.show = shouldShowBeam;
-    if (shouldShowBeam) {
+
+    let beamShown = shouldShowBeam;
+    if (info.useGeoBeamPrimitive) {
+      beamShown = shouldShowBeam && syncGeoBeamPrimitive(
+        info,
+        coveragePrimitiveCollection,
+        satPosition,
+        accessLink.satId,
+      );
+      if (!beamShown) {
+        removeGeoBeamPrimitive(info, coveragePrimitiveCollection);
+      }
+    } else if (info.beamEntity) {
+      info.beamEntity.show = shouldShowBeam;
+    }
+
+    if (beamShown) {
       nextShownIds.add(coverageKey);
     }
   }
@@ -1309,7 +1493,7 @@ function updateCoverageVisibility({
     if (!nextShownIds.has(coverageKey)) {
       const info = coverageEntities.get(coverageKey);
       if (info) {
-        hideCoverageCells(info);
+        hideCoverageCells(info, coveragePrimitiveCollection);
       }
     }
   }
@@ -1507,6 +1691,7 @@ export async function loadSatsimScenario({
   const entityLookup = buildEntityLookup(dataSource.entities);
   const coverageDataSource = new Cesium.CustomDataSource("satsim-coverage");
   const satellitePrimitives = createSatellitePointPrimitives(viewer, bundle, trackStore, miniMode);
+  const coveragePrimitiveCollection = viewer.scene.primitives.add(new Cesium.PrimitiveCollection());
   const routePolylineCollection = viewer.scene.primitives.add(new Cesium.PolylineCollection());
   const topologyPolylineCollection = viewer.scene.primitives.add(new Cesium.PolylineCollection());
   const routePolylinePool = [];
@@ -1634,6 +1819,7 @@ export async function loadSatsimScenario({
 
     updateCoverageVisibility({
       coverageDataSource,
+      coveragePrimitiveCollection,
       coverageEntities,
       entityLookup,
       accessLinks: collectAccessSatelliteLinks(incrementalState.activeTopology, bundle),
@@ -1683,6 +1869,7 @@ export async function loadSatsimScenario({
       viewer.dataSources.remove(coverageDataSource, true);
       viewer.scene.primitives.remove(topologyPolylineCollection);
       viewer.scene.primitives.remove(routePolylineCollection);
+      viewer.scene.primitives.remove(coveragePrimitiveCollection);
       viewer.scene.primitives.remove(satellitePrimitives.collection);
       viewer.dataSources.remove(dataSource, true);
     },
