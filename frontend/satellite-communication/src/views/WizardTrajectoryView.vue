@@ -39,7 +39,7 @@
               <input v-model.trim="newRouteId" name="aircraftId" type="text" placeholder="例如：AC_1" />
             </label>
             <label class="v2-field">
-              <span>航线进度</span>
+              <span>航线进度（%）</span>
               <input v-model.number="newStartProgressPercent" name="startProgressPercent" type="number" min="0" max="100" step="1" />
             </label>
           </div>
