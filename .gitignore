@@ -13,6 +13,7 @@ frontend/**/coverage/
 frontend/**/.generated-simulations/
 frontend/**/public/cesium/
 frontend/**/public/pictures/
+frontend/**/docs/
 frontend/**/.env
 frontend/**/.env.*
 !frontend/**/.env.example
