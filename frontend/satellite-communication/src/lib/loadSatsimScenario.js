@@ -1138,13 +1138,17 @@ function syncGeoBeamPrimitive(info, coveragePrimitiveCollection, satellitePositi
   }
 
   const nextPrimitive = buildGeoBeamPrimitive(satellitePosition, satelliteId);
-  removeGeoBeamPrimitive(info, coveragePrimitiveCollection);
   if (!nextPrimitive) {
+    removeGeoBeamPrimitive(info, coveragePrimitiveCollection);
     return false;
   }
 
+  const previousPrimitive = info.geoBeamPrimitive;
   info.geoBeamPrimitive = coveragePrimitiveCollection.add(nextPrimitive);
   info.geoBeamLastUpdateMs = now;
+  if (previousPrimitive) {
+    coveragePrimitiveCollection.remove(previousPrimitive);
+  }
   return true;
 }
 
