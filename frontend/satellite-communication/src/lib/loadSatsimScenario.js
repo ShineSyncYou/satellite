@@ -44,7 +44,7 @@ const GEO_COVERAGE_HALF_ANGLE_RAD = Cesium.Math.toRadians(8);
 // 高轨波束渲染模式：
 // true  = 使用单 Primitive 自定义网格，真实贴地锥面，效果更准确；
 // false = 使用现有 cylinder 轻量圆锥，性能最稳但只是视觉近似。
-const USE_GEO_BEAM_PRIMITIVE = false;
+const USE_GEO_BEAM_PRIMITIVE = true;
 const GEO_BEAM_SEGMENT_COUNT = 96;
 const GEO_BEAM_UPDATE_INTERVAL_MS = 500;
 const GEO_BEAM_CYLINDER_EXTENSION_RATIO = 1.08;
