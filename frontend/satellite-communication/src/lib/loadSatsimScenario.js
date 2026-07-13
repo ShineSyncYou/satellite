@@ -44,9 +44,10 @@ const GEO_COVERAGE_HALF_ANGLE_RAD = Cesium.Math.toRadians(8);
 // 高轨波束渲染模式：
 // true  = 使用单 Primitive 自定义网格，真实贴地锥面，效果更准确；
 // false = 使用现有 cylinder 轻量圆锥，性能最稳但只是视觉近似。
-const USE_GEO_BEAM_PRIMITIVE = true;
-const GEO_BEAM_SEGMENT_COUNT = 48;
+const USE_GEO_BEAM_PRIMITIVE = false;
+const GEO_BEAM_SEGMENT_COUNT = 96;
 const GEO_BEAM_UPDATE_INTERVAL_MS = 500;
+const GEO_BEAM_CYLINDER_EXTENSION_RATIO = 1.08;
 const HONEYCOMB_CELL_RADIUS_M = 70000;
 const HONEYCOMB_HEIGHT_M = 900;
 const HONEYCOMB_OFFSETS = Object.freeze(buildHoneycombOffsets(3));
@@ -976,13 +977,24 @@ function isGeoSatelliteId(satelliteId) {
   return String(satelliteId || "").startsWith("sat_geo_");
 }
 
+function beamCylinderLengthRatio(satelliteId) {
+  return isGeoSatelliteId(satelliteId) ? GEO_BEAM_CYLINDER_EXTENSION_RATIO : 1;
+}
+
+function computeBeamCylinderEndPosition(satellitePosition, satelliteId, result = new Cesium.Cartesian3()) {
+  const footprintPosition = getSubPointOnGround(satellitePosition, new Cesium.Cartesian3());
+  const beamVector = Cesium.Cartesian3.subtract(footprintPosition, satellitePosition, new Cesium.Cartesian3());
+  Cesium.Cartesian3.multiplyByScalar(beamVector, beamCylinderLengthRatio(satelliteId), beamVector);
+  return Cesium.Cartesian3.add(satellitePosition, beamVector, result);
+}
+
 function computeBeamFootprintRadius(satellitePosition, satelliteId = "") {
   if (!satellitePosition) {
     return HONEYCOMB_CELL_RADIUS_M * 3;
   }
   const footprintPosition = getSubPointOnGround(satellitePosition, new Cesium.Cartesian3());
   const height = Cesium.Cartesian3.distance(satellitePosition, footprintPosition);
-  const rawRadius = height * Math.tan(satelliteCoverageHalfAngleRad(satelliteId));
+  const rawRadius = height * beamCylinderLengthRatio(satelliteId) * Math.tan(satelliteCoverageHalfAngleRad(satelliteId));
   return Math.max(rawRadius, HONEYCOMB_CELL_RADIUS_M * 3);
 }
 
@@ -1347,8 +1359,8 @@ function ensureCoverageEntity(coverageDataSource, entityLookup, coverageEntities
       if (!satPosition) {
         return undefined;
       }
-      const footprintPosition = getSubPointOnGround(satPosition, scratchGroundStationPosition);
-      return Cesium.Cartesian3.midpoint(satPosition, footprintPosition, result || scratchMidpoint);
+      const beamEndPosition = computeBeamCylinderEndPosition(satPosition, accessLink.satId, scratchGroundStationPosition);
+      return Cesium.Cartesian3.midpoint(satPosition, beamEndPosition, result || scratchMidpoint);
     }, false),
     orientation: new Cesium.CallbackProperty((time, result) => {
       const satPosition = satEntity.position.getValue(time, scratchSatellitePosition);
@@ -1365,8 +1377,8 @@ function ensureCoverageEntity(coverageDataSource, entityLookup, coverageEntities
         if (!satPosition) {
           return 1;
         }
-        const footprintPosition = getSubPointOnGround(satPosition, scratchGroundStationPosition);
-        return Cesium.Cartesian3.distance(satPosition, footprintPosition);
+        const beamEndPosition = computeBeamCylinderEndPosition(satPosition, accessLink.satId, scratchGroundStationPosition);
+        return Cesium.Cartesian3.distance(satPosition, beamEndPosition);
       }, false),
       topRadius: 0,
       bottomRadius: new Cesium.CallbackProperty((time) => {
@@ -1374,8 +1386,6 @@ function ensureCoverageEntity(coverageDataSource, entityLookup, coverageEntities
         if (!satPosition) {
           return 1;
         }
-        const footprintPosition = getSubPointOnGround(satPosition, scratchGroundStationPosition);
-        const height = Cesium.Cartesian3.distance(satPosition, footprintPosition);
         return computeBeamFootprintRadius(satPosition, accessLink.satId);
       }, false),
       material: COVERAGE_BEAM_COLOR,
