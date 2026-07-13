@@ -454,6 +454,8 @@ function buildSampleConfig(manifest) {
     // 统一由服务端生成标准 ISO 时间，避免不同客户端提交的时间字符串格式不兼容。
     start_time: new Date().toISOString(),
     tle_file: "input.tle",
+    isl_cross_plane_high_latitude_limit_deg: 70,
+    isl_block_seam_cross_plane: true,
   };
 }
 

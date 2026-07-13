@@ -218,6 +218,9 @@ async function confirmDelete() {
   try {
     if (record.mode === "server-generated" || record.mode === "server-imported") {
       await deleteServerScenario(record.id);
+      // 服务端场景在生成完成时可能也保留了一份浏览器本地兼容记录。
+      // 服务端删除成功后同步清理本地记录，避免刷新或重启后再次显示。
+      await deleteUserScenario(record.id);
       await refreshServerScenarioRecords().catch(() => []);
     } else {
       await deleteUserScenario(record.id);

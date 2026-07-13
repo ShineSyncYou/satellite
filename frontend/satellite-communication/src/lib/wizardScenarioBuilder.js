@@ -40,6 +40,7 @@ export const WEATHER_PRESET_OPTIONS = Object.freeze([
 ]);
 
 const AUTO_TLE_NAME_PATTERN = /^(?<prefix>[A-Za-z0-9]+)_(?<plane>\d+)_(?<slot>\d+)$/;
+const AUTO_TLE_GEO_NAME_PATTERN = /^(?<prefix>[A-Za-z0-9]+)_GEO$/i;
 
 function roundTo(value, digits = 6) {
   return Number(Number(value).toFixed(digits));
@@ -123,7 +124,10 @@ export function validateAutoWalkerTle(tleText) {
   try {
     const satellites = parseTleCatalog(tleText);
     const sampleNames = satellites.slice(0, 5).map((item) => item.name);
-    const unmatched = satellites.find((item) => !AUTO_TLE_NAME_PATTERN.test(item.name));
+    const unmatched = satellites.find((item) => (
+      !AUTO_TLE_NAME_PATTERN.test(item.name)
+      && !AUTO_TLE_GEO_NAME_PATTERN.test(item.name)
+    ));
     if (unmatched) {
       return {
         isValid: false,
@@ -152,8 +156,15 @@ export function validateAutoWalkerTle(tleText) {
 export function buildAutoSatMapping(tleText) {
   const satellites = parseTleCatalog(tleText);
   const mapping = {};
+  let geoIndex = 0;
 
   for (const satellite of satellites) {
+    if (AUTO_TLE_GEO_NAME_PATTERN.test(satellite.name)) {
+      geoIndex += 1;
+      mapping[satellite.name] = `sat_geo_${geoIndex}`;
+      continue;
+    }
+
     const match = satellite.name.match(AUTO_TLE_NAME_PATTERN);
     if (!match?.groups) {
       throw new Error(`卫星名称 ${satellite.name} 无法自动生成 sat_mapping。`);
