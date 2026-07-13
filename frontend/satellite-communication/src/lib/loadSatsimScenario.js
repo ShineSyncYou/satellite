@@ -41,6 +41,8 @@ const COVERAGE_COLOR = Cesium.Color.fromCssColorString("#4ea9ff").withAlpha(0.12
 const COVERAGE_OUTLINE_COLOR = Cesium.Color.fromCssColorString("#e8f7ff").withAlpha(0.52);
 const DEFAULT_COVERAGE_HALF_ANGLE_RAD = Cesium.Math.toRadians(24);
 const GEO_COVERAGE_HALF_ANGLE_RAD = Cesium.Math.toRadians(8);
+const COVERAGE_FOOTPRINT_SEGMENTS = 128;
+const GEO_BEAM_SURFACE_SEGMENTS = 64;
 const HONEYCOMB_CELL_RADIUS_M = 70000;
 const HONEYCOMB_HEIGHT_M = 900;
 const HONEYCOMB_OFFSETS = Object.freeze(buildHoneycombOffsets(3));
@@ -980,6 +982,114 @@ function computeBeamFootprintRadius(satellitePosition, satelliteId = "") {
   return Math.max(rawRadius, HONEYCOMB_CELL_RADIUS_M * 3);
 }
 
+function intersectRayWithWgs84(origin, direction) {
+  const radii = Cesium.Ellipsoid.WGS84.radii;
+  const ox = origin.x / radii.x;
+  const oy = origin.y / radii.y;
+  const oz = origin.z / radii.z;
+  const dx = direction.x / radii.x;
+  const dy = direction.y / radii.y;
+  const dz = direction.z / radii.z;
+
+  const a = dx * dx + dy * dy + dz * dz;
+  const b = 2 * (ox * dx + oy * dy + oz * dz);
+  const c = ox * ox + oy * oy + oz * oz - 1;
+  const discriminant = b * b - 4 * a * c;
+  if (a <= 0 || discriminant < 0) {
+    return null;
+  }
+
+  const root = Math.sqrt(discriminant);
+  const near = (-b - root) / (2 * a);
+  const far = (-b + root) / (2 * a);
+  const distance = near > 0 ? near : far > 0 ? far : Number.NaN;
+  if (!Number.isFinite(distance)) {
+    return null;
+  }
+
+  const offset = Cesium.Cartesian3.multiplyByScalar(direction, distance, new Cesium.Cartesian3());
+  return Cesium.Cartesian3.add(origin, offset, new Cesium.Cartesian3());
+}
+
+function buildBeamFrame(satellitePosition) {
+  const subPoint = getSubPointOnGround(satellitePosition, new Cesium.Cartesian3());
+  const nadir = Cesium.Cartesian3.subtract(subPoint, satellitePosition, new Cesium.Cartesian3());
+  if (Cesium.Cartesian3.magnitudeSquared(nadir) <= 0) {
+    return null;
+  }
+  Cesium.Cartesian3.normalize(nadir, nadir);
+
+  const east = Cesium.Cartesian3.cross(Cesium.Cartesian3.UNIT_Z, nadir, new Cesium.Cartesian3());
+  if (Cesium.Cartesian3.magnitudeSquared(east) < 1e-8) {
+    Cesium.Cartesian3.cross(Cesium.Cartesian3.UNIT_X, nadir, east);
+  }
+  Cesium.Cartesian3.normalize(east, east);
+
+  const north = Cesium.Cartesian3.cross(nadir, east, new Cesium.Cartesian3());
+  Cesium.Cartesian3.normalize(north, north);
+  return { nadir, east, north };
+}
+
+function computeBeamFootprintEdgePosition(satellitePosition, satelliteId, bearingRad) {
+  const frame = buildBeamFrame(satellitePosition);
+  if (!frame) {
+    return null;
+  }
+
+  const radial = Cesium.Cartesian3.add(
+    Cesium.Cartesian3.multiplyByScalar(frame.east, Math.cos(bearingRad), new Cesium.Cartesian3()),
+    Cesium.Cartesian3.multiplyByScalar(frame.north, Math.sin(bearingRad), new Cesium.Cartesian3()),
+    new Cesium.Cartesian3(),
+  );
+  const halfAngleRad = satelliteCoverageHalfAngleRad(satelliteId);
+  const direction = Cesium.Cartesian3.add(
+    Cesium.Cartesian3.multiplyByScalar(frame.nadir, Math.cos(halfAngleRad), new Cesium.Cartesian3()),
+    Cesium.Cartesian3.multiplyByScalar(radial, Math.sin(halfAngleRad), new Cesium.Cartesian3()),
+    new Cesium.Cartesian3(),
+  );
+  Cesium.Cartesian3.normalize(direction, direction);
+  return intersectRayWithWgs84(satellitePosition, direction);
+}
+
+function buildBeamFootprintHierarchy(satellitePosition, satelliteId) {
+  if (!satellitePosition) {
+    return new Cesium.PolygonHierarchy([]);
+  }
+
+  const positions = [];
+  for (let index = 0; index < COVERAGE_FOOTPRINT_SEGMENTS; index += 1) {
+    const bearingRad = (Math.PI * 2 * index) / COVERAGE_FOOTPRINT_SEGMENTS;
+    const position = computeBeamFootprintEdgePosition(satellitePosition, satelliteId, bearingRad);
+    if (position) {
+      positions.push(position);
+    }
+  }
+
+  return positions.length >= 3
+    ? new Cesium.PolygonHierarchy(positions)
+    : new Cesium.PolygonHierarchy([]);
+}
+
+function buildBeamSurfaceTriangleHierarchy(satellitePosition, satelliteId, segmentIndex) {
+  if (!satellitePosition) {
+    return new Cesium.PolygonHierarchy([]);
+  }
+
+  const startBearingRad = (Math.PI * 2 * segmentIndex) / GEO_BEAM_SURFACE_SEGMENTS;
+  const endBearingRad = (Math.PI * 2 * (segmentIndex + 1)) / GEO_BEAM_SURFACE_SEGMENTS;
+  const startPosition = computeBeamFootprintEdgePosition(satellitePosition, satelliteId, startBearingRad);
+  const endPosition = computeBeamFootprintEdgePosition(satellitePosition, satelliteId, endBearingRad);
+  if (!startPosition || !endPosition) {
+    return new Cesium.PolygonHierarchy([]);
+  }
+
+  return new Cesium.PolygonHierarchy([
+    Cesium.Cartesian3.clone(satellitePosition, new Cesium.Cartesian3()),
+    startPosition,
+    endPosition,
+  ]);
+}
+
 function buildHoneycombRing(radius) {
   const results = [];
   for (let q = -radius; q <= radius; q += 1) {
@@ -1228,6 +1338,39 @@ function ensureCoverageEntity(coverageDataSource, entityLookup, coverageEntities
     },
   });
 
+  const footprintEntity = coverageDataSource.entities.add({
+    id: `coverage-footprint:${coverageKey}`,
+    show: false,
+    polygon: {
+      hierarchy: new Cesium.CallbackProperty((time) => {
+        const satPosition = satEntity.position.getValue(time, scratchSatellitePosition);
+        return buildBeamFootprintHierarchy(satPosition, accessLink.satId);
+      }, false),
+      material: COVERAGE_COLOR,
+      outline: true,
+      outlineColor: COVERAGE_OUTLINE_COLOR,
+      perPositionHeight: false,
+      closeTop: true,
+      closeBottom: true,
+    },
+  });
+
+  const beamSurfaceEntities = Array.from({ length: GEO_BEAM_SURFACE_SEGMENTS }, (_, index) => coverageDataSource.entities.add({
+    id: `coverage-beam-surface:${coverageKey}:${index}`,
+    show: false,
+    polygon: {
+      hierarchy: new Cesium.CallbackProperty((time) => {
+        const satPosition = satEntity.position.getValue(time, scratchSatellitePosition);
+        return buildBeamSurfaceTriangleHierarchy(satPosition, accessLink.satId, index);
+      }, false),
+      material: COVERAGE_BEAM_COLOR,
+      outline: false,
+      perPositionHeight: true,
+      closeTop: true,
+      closeBottom: true,
+    },
+  }));
+
   const cellEntities = HONEYCOMB_OFFSETS.map((cellOffset, index) => coverageDataSource.entities.add({
     id: `coverage:${coverageKey}:${index}`,
     show: false,
@@ -1250,13 +1393,17 @@ function ensureCoverageEntity(coverageDataSource, entityLookup, coverageEntities
     },
   }));
 
-  const value = { beamEntity, cellEntities, satEntity, targetEntity };
+  const value = { beamEntity, footprintEntity, beamSurfaceEntities, cellEntities, satEntity, targetEntity };
   coverageEntities.set(coverageKey, value);
   return value;
 }
 
 function hideCoverageCells(info) {
   info.beamEntity.show = false;
+  info.footprintEntity.show = false;
+  for (const beamSurfaceEntity of info.beamSurfaceEntities) {
+    beamSurfaceEntity.show = false;
+  }
   for (const cellEntity of info.cellEntities) {
     cellEntity.show = false;
   }
@@ -1291,16 +1438,21 @@ function updateCoverageVisibility({
 
     const satPosition = info.satEntity.position.getValue(time, scratchSatellitePosition);
     const targetPosition = info.targetEntity.position.getValue(time, scratchGroundStationPosition);
-    const showHoneycomb = !isGeoSatelliteId(accessLink.satId);
+    const showGeoFootprint = isGeoSatelliteId(accessLink.satId);
+    const showHoneycomb = !showGeoFootprint;
     const cellCount = showHoneycomb && satPosition && targetPosition
         ? honeycombCellCountForAccess(satPosition, targetPosition)
         : 0;
     info.cellEntities.forEach((cellEntity, index) => {
       cellEntity.show = index < cellCount;
     });
-    const shouldShowBeam = Boolean(satPosition && targetPosition && (showHoneycomb ? cellCount > 0 : true));
-    info.beamEntity.show = shouldShowBeam;
-    if (shouldShowBeam) {
+    const shouldShowCoverage = Boolean(satPosition && targetPosition && (showHoneycomb ? cellCount > 0 : true));
+    info.beamEntity.show = shouldShowCoverage && !showGeoFootprint;
+    info.footprintEntity.show = shouldShowCoverage && showGeoFootprint;
+    for (const beamSurfaceEntity of info.beamSurfaceEntities) {
+      beamSurfaceEntity.show = shouldShowCoverage && showGeoFootprint;
+    }
+    if (shouldShowCoverage) {
       nextShownIds.add(coverageKey);
     }
   }
