@@ -33,31 +33,34 @@
             <input v-model.number="stationAltKm" name="groundStationAltitude" type="number" min="0" max="5" step="0.1" />
           </label>
 
-          <div class="form-grid two-up">
-            <div class="v2-helper-card">
-              <span>纬度</span>
-              <strong>{{ stationLatText }}</strong>
+          <div class="station-coordinate-grid">
+            <div class="station-coordinate-card">
+              <span class="station-coordinate-card__label"><span aria-hidden="true">◉</span> 纬度</span>
+              <strong>{{ stationLatDisplay }}</strong>
             </div>
-            <div class="v2-helper-card">
-              <span>经度</span>
-              <strong>{{ stationLonText }}</strong>
+            <div class="station-coordinate-card">
+              <span class="station-coordinate-card__label"><span aria-hidden="true">◌</span> 经度</span>
+              <strong>{{ stationLonDisplay }}</strong>
             </div>
           </div>
 
-          <div class="stack-gap">
-            <h3 style="margin: 0;">天气预设</h3>
-            <div class="table-actions" style="flex-wrap: wrap;">
+          <div class="weather-preset-section">
+            <h3>天气预设</h3>
+            <div class="weather-preset-grid">
               <button
                 v-for="weather in WEATHER_PRESET_OPTIONS"
                 :key="weather.key"
-                class="v2-button"
-                :class="weatherPreset === weather.key ? '' : 'v2-button--ghost'"
+                type="button"
+                class="weather-preset-card"
+                :class="{ 'is-active': weatherPreset === weather.key }"
+                :aria-pressed="weatherPreset === weather.key"
                 @click="weatherPreset = weather.key"
               >
-                {{ weather.icon }} {{ weather.label }}
+                <span class="weather-preset-card__icon" aria-hidden="true">{{ weather.icon }}</span>
+                <span class="weather-preset-card__label">{{ weather.label }}</span>
+                <span class="weather-preset-card__description">{{ weather.description }}</span>
               </button>
             </div>
-            <p>{{ selectedWeather.description }}</p>
           </div>
         </div>
       </div>
@@ -77,7 +80,7 @@ import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import ProductScaffold from "../components/layout/ProductScaffold.vue";
 import WizardCesiumMap from "../components/task/WizardCesiumMap.vue";
-import { formatCoordinate, getWeatherPresetMeta, WEATHER_PRESET_OPTIONS } from "../lib/wizardScenarioBuilder";
+import { formatCoordinate, WEATHER_PRESET_OPTIONS } from "../lib/wizardScenarioBuilder";
 import { DEFAULT_GROUND_STATION_ALT_KM, getWizardDraft, updateWizardDraft } from "../lib/wizardDraft";
 
 const router = useRouter();
@@ -102,9 +105,16 @@ const groundStationMarker = computed(() => (
         pixelSize: 12,
       }]
 ));
-const stationLatText = computed(() => formatCoordinate(stationLat.value));
-const stationLonText = computed(() => formatCoordinate(stationLon.value));
-const selectedWeather = computed(() => getWeatherPresetMeta(weatherPreset.value));
+const stationLatDisplay = computed(() => (
+  stationLat.value == null
+    ? "未选择"
+    : `${formatCoordinate(Math.abs(stationLat.value))} ${stationLat.value >= 0 ? "N" : "S"}`
+));
+const stationLonDisplay = computed(() => (
+  stationLon.value == null
+    ? "未选择"
+    : `${formatCoordinate(Math.abs(stationLon.value))} ${stationLon.value >= 0 ? "E" : "W"}`
+));
 
 function onMapClick(position) {
   errorText.value = "";
@@ -154,8 +164,98 @@ function goNext() {
   height: 100%;
 }
 
+.station-coordinate-grid,
+.weather-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.station-coordinate-card,
+.weather-preset-card {
+  border: 1px solid var(--v2-border);
+  border-radius: 14px;
+  background: rgba(5, 20, 36, 0.68);
+}
+
+.station-coordinate-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+}
+
+.station-coordinate-card__label {
+  color: var(--v2-text-muted);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+}
+
+.station-coordinate-card__label span {
+  color: var(--v2-primary);
+  margin-right: 6px;
+}
+
+.station-coordinate-card strong {
+  color: var(--v2-text);
+  font-size: 20px;
+}
+
+.weather-preset-section {
+  display: grid;
+  gap: 12px;
+}
+
+.weather-preset-section h3 {
+  margin: 0;
+}
+
+.weather-preset-card {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  grid-template-areas:
+    "icon label"
+    "icon description";
+  align-items: center;
+  gap: 2px 10px;
+  min-height: 82px;
+  padding: 12px;
+  color: var(--v2-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.weather-preset-card:hover,
+.weather-preset-card.is-active {
+  border-color: rgba(36, 179, 255, 0.7);
+  background: rgba(36, 179, 255, 0.14);
+}
+
+.weather-preset-card__icon {
+  grid-area: icon;
+  font-size: 20px;
+}
+
+.weather-preset-card__label {
+  grid-area: label;
+  font-weight: 700;
+}
+
+.weather-preset-card__description {
+  grid-area: description;
+  color: var(--v2-text-muted);
+  font-size: 12px;
+}
+
 @media (max-width: 1200px) {
   .wizard-map-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .station-coordinate-grid,
+  .weather-preset-grid {
     grid-template-columns: 1fr;
   }
 }

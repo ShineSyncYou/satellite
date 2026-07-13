@@ -36,22 +36,21 @@
         </label>
       </div>
 
-      <div class="form-grid two-up">
-        <label class="v2-field">
-          <span>地空链路带宽（Mbps）</span>
-          <input v-model.number="bwGslMbps" name="bwGslMbps" type="number" min="1" step="1" />
-        </label>
-        <label class="v2-field">
-          <span>星间链路带宽（Mbps）</span>
-          <input v-model.number="bwIslMbps" name="bwIslMbps" type="number" min="1" step="1" />
-        </label>
-      </div>
-
-      <div class="form-grid two-up">
-        <label class="v2-field">
-          <span>星上总线带宽（Mbps）</span>
-          <input v-model.number="intraSatelliteBusMbps" name="intraSatelliteBusMbps" type="number" min="1" step="10" />
-        </label>
+      <div class="bandwidth-preview-layout">
+        <div class="bandwidth-grid">
+          <label class="v2-field">
+            <span>地空链路带宽（Mbps）</span>
+            <input v-model.number="bwGslMbps" name="bwGslMbps" type="number" min="1" step="1" />
+          </label>
+          <label class="v2-field">
+            <span>星间链路带宽（Mbps）</span>
+            <input v-model.number="bwIslMbps" name="bwIslMbps" type="number" min="1" step="1" />
+          </label>
+          <label class="v2-field">
+            <span>星上总线带宽（Mbps）</span>
+            <input v-model.number="intraSatelliteBusMbps" name="intraSatelliteBusMbps" type="number" min="1" step="10" />
+          </label>
+        </div>
         <div class="v2-helper-card stack-gap">
           <h3>生成前预览</h3>
           <p>TLE 校验：{{ previewValidationText }}</p>
@@ -196,5 +195,25 @@ async function submitManifest() {
 <style scoped>
 .wizard-page-section {
   max-width: 1820px;
+}
+
+.bandwidth-preview-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 18px;
+}
+
+.bandwidth-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+@media (max-width: 1200px) {
+  .bandwidth-preview-layout,
+  .bandwidth-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
