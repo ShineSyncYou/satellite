@@ -1,0 +1,589 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://satsim.local/schemas/simulation_output_bundle.schema.json",
+  "title": "Satellite Simulation Output Bundle",
+  "description": "Single-package JSON output schema for downstream animation and communication analysis.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "metadata",
+    "node_tracks",
+    "topology_events",
+    "route_events"
+  ],
+  "properties": {
+    "metadata": {
+      "$ref": "#/$defs/Metadata"
+    },
+    "node_tracks": {
+      "type": "array",
+      "description": "Per-node trajectory samples used for position interpolation.",
+      "items": {
+        "$ref": "#/$defs/NodeTrack"
+      }
+    },
+    "topology_events": {
+      "type": "array",
+      "description": "Topology snapshot and delta events. Use a snapshot at t=0, then deltas for later link changes.",
+      "items": {
+        "$ref": "#/$defs/TopologyEvent"
+      }
+    },
+    "route_events": {
+      "type": "array",
+      "description": "Route snapshot and delta events. Each route entry carries end-to-end communication metrics.",
+      "items": {
+        "$ref": "#/$defs/RouteEvent"
+      }
+    }
+  },
+  "$defs": {
+    "Metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "output_mode",
+        "generated_at",
+        "start_time",
+        "duration_s",
+        "base_time_step_s",
+        "event_sampling_enabled",
+        "event_sampling_min_step_s",
+        "beam",
+        "penalty_model",
+        "units"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "description": "Schema version of the output package.",
+          "examples": [
+            "1.0.0"
+          ]
+        },
+        "output_mode": {
+          "type": "string",
+          "const": "bundle",
+          "description": "Declares that the output is a single structured bundle."
+        },
+        "scenario_id": {
+          "type": "string",
+          "description": "Optional scenario identifier for downstream indexing."
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "UTC timestamp when the JSON bundle was generated."
+        },
+        "start_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "UTC simulation start time."
+        },
+        "duration_s": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Simulation duration in seconds."
+        },
+        "base_time_step_s": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Base regular sampling step before event-driven refinement."
+        },
+        "event_sampling_enabled": {
+          "type": "boolean",
+          "description": "Whether event-driven intermediate sampling is enabled."
+        },
+        "event_sampling_min_step_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Minimum event-refinement interval in seconds. Null when event-driven sampling is disabled."
+        },
+        "beam": {
+          "$ref": "#/$defs/BeamConfig"
+        },
+        "penalty_model": {
+          "$ref": "#/$defs/PenaltyModel"
+        },
+        "constellation": {
+          "$ref": "#/$defs/ConstellationInfo"
+        },
+        "units": {
+          "$ref": "#/$defs/Units"
+        }
+      }
+    },
+    "BeamConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sat_antenna_angle_deg",
+        "geo_sat_antenna_angle_deg"
+      ],
+      "properties": {
+        "sat_antenna_angle_deg": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "LEO and non-GEO antenna half-angle used by the access model."
+        },
+        "geo_sat_antenna_angle_deg": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "GEO antenna half-angle used by the access model."
+        }
+      }
+    },
+    "ConstellationInfo": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tle_file": {
+          "type": "string"
+        },
+        "isl_mode": {
+          "type": "string"
+        },
+        "satellite_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "aircraft_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ground_station_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "Units": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relative_time_s",
+        "lat_deg",
+        "lon_deg",
+        "alt_km",
+        "distance_km",
+        "bandwidth_mbps",
+        "tx_rate_mbps",
+        "effective_bandwidth_mbps",
+        "utilization",
+        "latency_ms",
+        "packet_loss_rate",
+        "ber"
+      ],
+      "properties": {
+        "relative_time_s": {
+          "const": "s"
+        },
+        "lat_deg": {
+          "const": "deg"
+        },
+        "lon_deg": {
+          "const": "deg"
+        },
+        "alt_km": {
+          "const": "km"
+        },
+        "distance_km": {
+          "const": "km"
+        },
+        "bandwidth_mbps": {
+          "const": "Mbps"
+        },
+        "tx_rate_mbps": {
+          "const": "Mbps"
+        },
+        "effective_bandwidth_mbps": {
+          "const": "Mbps"
+        },
+        "utilization": {
+          "const": "ratio"
+        },
+        "latency_ms": {
+          "const": "ms"
+        },
+        "packet_loss_rate": {
+          "const": "ratio"
+        },
+        "ber": {
+          "const": "ratio"
+        }
+      }
+    },
+    "HandoverPenaltyConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "duration_s",
+        "extra_latency_ms",
+        "extra_packet_loss_rate"
+      ],
+      "properties": {
+        "duration_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "extra_latency_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "extra_packet_loss_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "PenaltyModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "aircraft_satellite_handover",
+        "ground_station_satellite_handover"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "aircraft_satellite_handover": {
+          "$ref": "#/$defs/HandoverPenaltyConfig"
+        },
+        "ground_station_satellite_handover": {
+          "$ref": "#/$defs/HandoverPenaltyConfig"
+        }
+      }
+    },
+    "NodeTrack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "samples"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "satellite",
+            "aircraft",
+            "ground_station"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "samples": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/PositionSample"
+          }
+        }
+      }
+    },
+    "PositionSample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relative_time_s",
+        "lat_deg",
+        "lon_deg",
+        "alt_km"
+      ],
+      "properties": {
+        "relative_time_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "lat_deg": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "lon_deg": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        },
+        "alt_km": {
+          "type": "number"
+        }
+      }
+    },
+    "TopologyEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relative_time_s",
+        "event_kind",
+        "links_upsert",
+        "links_remove"
+      ],
+      "properties": {
+        "relative_time_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "event_kind": {
+          "type": "string",
+          "enum": [
+            "snapshot",
+            "delta"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "description": "Optional reason for the topology update, for example access handover or ISL recalculation."
+        },
+        "links_upsert": {
+          "type": "array",
+          "description": "Active links to create or overwrite at this time.",
+          "items": {
+            "$ref": "#/$defs/LinkState"
+          }
+        },
+        "links_remove": {
+          "type": "array",
+          "description": "Links to remove at this time.",
+          "items": {
+            "$ref": "#/$defs/LinkRef"
+          }
+        }
+      }
+    },
+    "LinkRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "target",
+        "type"
+      ],
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "GSL",
+            "ISL"
+          ]
+        }
+      }
+    },
+    "LinkState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "target",
+        "type",
+        "bandwidth_mbps",
+        "tx_rate_mbps",
+        "utilization",
+        "color"
+      ],
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "GSL",
+            "ISL"
+          ]
+        },
+        "distance_km": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Optional link distance at the event time."
+        },
+        "bandwidth_mbps": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Configured link bandwidth or capacity."
+        },
+        "tx_rate_mbps": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Traffic load currently carried by the link."
+        },
+        "utilization": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Bandwidth utilization ratio, usually within [0, 1]."
+        },
+        "color": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Color label or code used by downstream rendering, for example green, yellow, red, or a hex color."
+        }
+      }
+    },
+    "RouteTransient": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "active",
+        "causes",
+        "extra_latency_ms",
+        "extra_packet_loss_rate",
+        "remaining_s"
+      ],
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "causes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "aircraft_satellite_handover",
+              "ground_station_satellite_handover"
+            ]
+          }
+        },
+        "extra_latency_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "extra_packet_loss_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "remaining_s": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "RouteEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relative_time_s",
+        "event_kind",
+        "routes"
+      ],
+      "properties": {
+        "relative_time_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "event_kind": {
+          "type": "string",
+          "enum": [
+            "snapshot",
+            "delta"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "description": "Optional reason for the route update, for example path switch or access handover."
+        },
+        "routes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RouteState"
+          }
+        }
+      }
+    },
+    "RouteState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "target",
+        "connected",
+        "path",
+        "latency_ms",
+        "packet_loss_rate",
+        "ber"
+      ],
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "connected": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "array",
+          "description": "Ordered node ids from source to target. Empty when disconnected.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "hop_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional cached hop count for convenience."
+        },
+        "steady_latency_ms": {
+          "type": "number",
+          "description": "Steady-state end-to-end latency before transient handover penalty is applied."
+        },
+        "steady_packet_loss_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Steady-state packet loss before transient handover penalty is applied."
+        },
+        "steady_ber": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Steady-state BER before transient handover penalty is applied."
+        },
+        "effective_bandwidth_mbps": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Per-route effective bandwidth derived from the access queue service model and reduced further when transient handover loss is active."
+        },
+        "latency_ms": {
+          "type": "number",
+          "description": "End-to-end latency in milliseconds. Use -1 when disconnected."
+        },
+        "packet_loss_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "ber": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "transient": {
+          "$ref": "#/$defs/RouteTransient"
+        }
+      }
+    }
+  }
+}

@@ -402,6 +402,7 @@ export function buildSampleConfigPreview(draft) {
     aircraft_traj: buildAircraftTrajectories(aircraftRoutes),
     ground_stations: buildGroundStationPreview(draft.groundStation),
     sat_antenna_angle: roundTo(draft.communicationParams?.satAntennaAngleDeg ?? 35, 3),
+    geo_sat_antenna_angle: roundTo(draft.communicationParams?.geoSatAntennaAngleDeg ?? 8, 3),
     bw_gsl: roundTo(draft.communicationParams?.bwGslMbps ?? 150, 3),
     bw_isl: roundTo(draft.communicationParams?.bwIslMbps ?? 500, 3),
     rain_fade_intensity: weatherMeta.rainFadeIntensity,
@@ -453,6 +454,7 @@ export function buildWizardManifest(draft) {
     },
     communicationParams: {
       satAntennaAngleDeg: roundTo(draft.communicationParams?.satAntennaAngleDeg ?? 35, 3),
+      geoSatAntennaAngleDeg: roundTo(draft.communicationParams?.geoSatAntennaAngleDeg ?? 8, 3),
       bwGslMbps: roundTo(draft.communicationParams?.bwGslMbps ?? 150, 3),
       bwIslMbps: roundTo(draft.communicationParams?.bwIslMbps ?? 500, 3),
       intraSatelliteBusMbps: roundTo(draft.communicationParams?.intraSatelliteBusMbps ?? 800, 3),

@@ -1,9 +1,17 @@
-# Track only frontend source from this repository root.
+# Track only frontend source and satsim from this repository root.
 /*
 
 !/.gitignore
 !/frontend/
 !/frontend/**
+
+!/satsim/
+!/satsim/**
+satsim/.venv/
+satsim/data/
+satsim/result_player/
+satsim/**/__pycache__/
+satsim/**/*.pyc
 
 # Keep local/frontend generated files out of Git.
 frontend/**/node_modules/

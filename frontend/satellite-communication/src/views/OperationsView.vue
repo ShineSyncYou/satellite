@@ -60,6 +60,7 @@
         </div>
       </div>
     </div>
+    <div v-if="coverageWarning" class="coverage-warning" role="status">{{ coverageWarning }}</div>
 
     <aside v-if="selectedEntityInfo" class="entity-info-panel">
       <div class="entity-info-header">
@@ -72,14 +73,19 @@
 
       <div class="entity-model-preview">
         <model-viewer
+          v-if="modelViewerReady && !modelPreviewError"
+          :key="selectedEntityInfo.id"
           :src="selectedEntityInfo.modelSrc"
           camera-controls
           auto-rotate
           @load="onEntityPreviewModelLoad"
+          @error="onEntityPreviewModelError"
           shadow-intensity="0.8"
           exposure="1.1"
           environment-image="neutral"
         />
+        <img v-else-if="modelPreviewError" class="entity-model-preview-fallback" src="/pictures/satellite-proxy.svg" alt="卫星预览" />
+        <div v-else class="entity-model-preview-loading">正在加载卫星预览…</div>
       </div>
 
       <div class="entity-info-grid">
@@ -188,6 +194,8 @@ const playbackMultiplier = ref(DEFAULT_PLAYBACK_MULTIPLIER);
 const playbackPaused = ref(false);
 const selectedEntityInfo = ref(null);                                 // 左侧实体详情面板
 const selectedEntityId = ref("");                                     // 当前选中实体 ID
+const modelViewerReady = ref(typeof window !== "undefined" && Boolean(window.customElements?.get("model-viewer")));
+const modelPreviewError = ref(false);
 const isScenarioMenuOpen = ref(false);
 const isSpeedMenuOpen = ref(false);
 const currentScenarioRuntime = ref(null);
@@ -196,6 +204,7 @@ const sceneLoading = ref(true);
 const sceneLoadingText = ref("正在准备场景资源...");
 const sceneLoadError = ref("");
 const sceneEmpty = ref(false);
+const coverageWarning = ref("");
 const emptyScenarioText = "请先在场景配置库导入或生成场景。";
 const scenarioOptions = computed(() => {
   scenarioCatalogRefreshKey.value;
@@ -231,16 +240,19 @@ let modelViewerModulePromise = null;                                  // model-v
  */
 function ensureModelViewerLoaded() {
   if (typeof window === "undefined") {
-    return Promise.resolve();
+    return Promise.resolve(false);
   }
   if (window.customElements?.get("model-viewer")) {
-    return Promise.resolve();
+    return Promise.resolve(true);
   }
   if (!modelViewerModulePromise) {
-    modelViewerModulePromise = import("@google/model-viewer").catch((error) => {
-      modelViewerModulePromise = null;
-      console.warn("model-viewer load failed:", error);
-    });
+    modelViewerModulePromise = import("@google/model-viewer")
+      .then(() => Boolean(window.customElements?.get("model-viewer")))
+      .catch((error) => {
+        modelViewerModulePromise = null;
+        console.warn("model-viewer load failed:", error);
+        return false;
+      });
   }
   return modelViewerModulePromise;
 }
@@ -354,6 +366,10 @@ function onEntityPreviewModelLoad(event) {
       pbr.setRoughnessFactor(0.44);
     }
   }
+}
+
+function onEntityPreviewModelError() {
+  modelPreviewError.value = true;
 }
 
 /**
@@ -520,9 +536,8 @@ function bindEntityPickHandler() {
   }
 
   pickHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-  pickHandler.setInputAction((movement) => {
+  const resolvePickedEntityId = (movement) => {
     const pickResults = viewer.scene.drillPick(movement.position, 12) || [];
-    let entityId = null;
     for (const picked of pickResults) {
       const entity = picked?.id;
       const candidateId = typeof entity?.id === "string"
@@ -533,18 +548,26 @@ function bindEntityPickHandler() {
       }
       const nodeType = mainScenarioHandle?.bundle?.nodeTypeMap?.get(candidateId);
       if (nodeType === "satellite" || nodeType === "aircraft" || nodeType === "ground_station") {
-        entityId = candidateId;
-        break;
+        return candidateId;
       }
     }
+    return "";
+  };
+
+  pickHandler.setInputAction((movement) => {
+    const entityId = resolvePickedEntityId(movement);
     if (!entityId) {
       return;
     }
 
-    void ensureModelViewerLoaded();
-    selectedEntityId.value = entityId;
-    refreshSelectedEntityInfo();
+    void ensureModelViewerLoaded().then((ready) => {
+      modelViewerReady.value = ready;
+      modelPreviewError.value = false;
+      selectedEntityId.value = entityId;
+      refreshSelectedEntityInfo();
+    });
   }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
 }
 
 function unbindEntityPickHandler() {
@@ -919,6 +942,8 @@ function goBackToLanding() {
 
 function flyToChina() {
   if (!viewer || viewer.isDestroyed()) return;
+  // trackedEntity 会在每一帧改写相机变换；先解除跟踪，后续 flyTo 才是地球固定视角。
+  viewer.trackedEntity = undefined;
   viewer.camera.flyTo({
     destination: Cesium.Cartesian3.fromDegrees(104.0, 30.4, 6300000),
     orientation: {
@@ -1023,6 +1048,7 @@ async function initializeMainScene() {
   sceneLoading.value = true;
   sceneLoadError.value = "";
   sceneEmpty.value = false;
+  coverageWarning.value = "";
   if (!selectedScenario.value) {
     sceneLoading.value = false;
     sceneEmpty.value = true;
@@ -1041,16 +1067,9 @@ async function initializeMainScene() {
     miniMode: false,
     showCoverage: true,
     showLabels: true,
-    showSatelliteModel: true,
-    satelliteModelPoolEnabled: true,
-    satelliteModelPoolSize: 60,
-    satelliteModelEnableHeight: 12500000,
-    satelliteModelDisableHeight: 13500000,
-    satelliteModelUpdateThrottleMs: 250,
-    satelliteModelScale: 0.65,
-    satelliteModelMinPixelSize: 44,
-    satelliteModelMaximumScale: 120000,
-    satelliteModelMaxViewDistance: 13500000,
+    // 主地图未选中卫星使用批量化 SVG 代理；高精 tdrs.glb 仍由既有详情视图按需加载。
+    showSatelliteModel: false,
+    satelliteModelPoolEnabled: false,
     maxAircraft: 10,
     maxGroundStations: 1,
     showTopologyLinks: true,
@@ -1064,6 +1083,7 @@ async function initializeMainScene() {
       }
     },
   });
+  coverageWarning.value = mainScenarioHandle.coverageWarning;
 
   bindEntityPickHandler();
   bindAutoRotate();
@@ -1256,6 +1276,21 @@ onBeforeUnmount(() => {
   max-width: calc(100vw - 24px);
   justify-content: flex-end;
   z-index: 20;
+}
+
+.coverage-warning {
+  position: absolute;
+  top: 62px;
+  right: 12px;
+  z-index: 20;
+  max-width: min(360px, calc(100vw - 24px));
+  padding: 8px 12px;
+  border: 1px solid rgba(250, 204, 21, 0.48);
+  border-radius: 8px;
+  background: rgba(72, 47, 8, 0.9);
+  color: #fef3c7;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .playback-group {
@@ -1475,6 +1510,22 @@ onBeforeUnmount(() => {
   height: 180px;
   --poster-color: transparent;
   background: transparent;
+}
+
+.entity-model-preview-loading {
+  display: grid;
+  height: 180px;
+  place-items: center;
+  color: rgba(226, 242, 255, 0.72);
+  font-size: 13px;
+}
+
+.entity-model-preview-fallback {
+  display: block;
+  width: 100%;
+  height: 180px;
+  object-fit: contain;
+  padding: 28px;
 }
 
 .entity-item {

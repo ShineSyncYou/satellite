@@ -27,9 +27,16 @@
 
       <div class="form-grid two-up">
         <label class="v2-field">
-          <span>卫星天线角度（deg）</span>
+          <span>低轨卫星天线半张角（deg）</span>
           <input v-model.number="satAntennaAngleDeg" name="satAntennaAngleDeg" type="number" min="1" step="1" />
         </label>
+        <label class="v2-field">
+          <span>高轨卫星天线半张角（deg）</span>
+          <input v-model.number="geoSatAntennaAngleDeg" name="geoSatAntennaAngleDeg" type="number" min="0.1" step="0.1" />
+        </label>
+      </div>
+
+      <div class="form-grid two-up">
         <label class="v2-field">
           <span>轨迹采样间隔（秒）</span>
           <input v-model.number="timeStepSeconds" name="timeStepSeconds" type="number" min="5" step="5" />
@@ -110,6 +117,7 @@ const durationMin = ref(Number(draft.simulationParams?.totalMissionDurationMin |
 const speedMultiplier = ref(Number(draft.simulationParams?.simulationSpeedMultiplier || 5));
 const timeStepSeconds = ref(Number(draft.simulationParams?.timeStepSeconds || 30));
 const satAntennaAngleDeg = ref(Number(draft.communicationParams?.satAntennaAngleDeg || 35));
+const geoSatAntennaAngleDeg = ref(Number(draft.communicationParams?.geoSatAntennaAngleDeg || 8));
 const bwGslMbps = ref(Number(draft.communicationParams?.bwGslMbps || 150));
 const bwIslMbps = ref(Number(draft.communicationParams?.bwIslMbps || 500));
 const intraSatelliteBusMbps = ref(Number(draft.communicationParams?.intraSatelliteBusMbps || 800));
@@ -127,6 +135,7 @@ const previewDraft = computed(() => ({
   communicationParams: {
     ...draft.communicationParams,
     satAntennaAngleDeg: satAntennaAngleDeg.value,
+    geoSatAntennaAngleDeg: geoSatAntennaAngleDeg.value,
     bwGslMbps: bwGslMbps.value,
     bwIslMbps: bwIslMbps.value,
     intraSatelliteBusMbps: intraSatelliteBusMbps.value,
@@ -169,6 +178,7 @@ async function submitManifest() {
       },
       communicationParams: {
         satAntennaAngleDeg: satAntennaAngleDeg.value,
+        geoSatAntennaAngleDeg: geoSatAntennaAngleDeg.value,
         bwGslMbps: bwGslMbps.value,
         bwIslMbps: bwIslMbps.value,
         intraSatelliteBusMbps: intraSatelliteBusMbps.value,
