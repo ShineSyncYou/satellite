@@ -36,7 +36,12 @@
 
       <label class="v2-field">
         <span>任务标题</span>
-        <input v-model="title" name="taskTitle" type="text" placeholder="例如：中国区域链路演示" />
+        <input
+          v-model="title"
+          name="taskTitle"
+          type="text"
+          placeholder="例如：GW-2_polar_20x20_1175km_offset0.5deg_GEO"
+        />
       </label>
 
       <div class="v2-helper-card stack-gap">
@@ -92,9 +97,8 @@ async function onFilePick(event) {
   if (!file) return;
   fileName.value = file.name;
   tleText.value = await file.text();
-  if (!title.value) {
-    title.value = file.name.replace(/\.(tle|txt)$/i, "");
-  }
+  const nextTitle = file.name.replace(/\.(tle|txt)$/i, "");
+  title.value = nextTitle;
 }
 
 function goNext() {

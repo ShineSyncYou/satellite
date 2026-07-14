@@ -39,6 +39,7 @@ const COVERAGE_BEAM_COLOR = Cesium.Color.fromCssColorString("#4ea9ff").withAlpha
 const COVERAGE_BEAM_OUTLINE_COLOR = Cesium.Color.fromCssColorString("#7fc6ff").withAlpha(0.38);
 const COVERAGE_COLOR = Cesium.Color.fromCssColorString("#4ea9ff").withAlpha(0.12);
 const COVERAGE_OUTLINE_COLOR = Cesium.Color.fromCssColorString("#e8f7ff").withAlpha(0.52);
+
 const DEFAULT_COVERAGE_HALF_ANGLE_RAD = Cesium.Math.toRadians(24);
 const GEO_COVERAGE_HALF_ANGLE_RAD = Cesium.Math.toRadians(8);
 // 高轨波束渲染模式：
