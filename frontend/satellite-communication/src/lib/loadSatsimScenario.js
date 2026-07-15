@@ -40,11 +40,12 @@ const COVERAGE_COLOR = Cesium.Color.fromCssColorString("#4ea9ff").withAlpha(0.10
 const COVERAGE_OUTLINE_COLOR = Cesium.Color.fromCssColorString("#e8f7ff").withAlpha(0.30);
 const GEO_BEAM_SEGMENT_COUNT = 48;
 const LEO_FOOTPRINT_SEGMENT_COUNT = 48;
-const GEO_BEAM_UPDATE_INTERVAL_MS = 500;
+const GEO_BEAM_UPDATE_INTERVAL_MS = 160;
 const HONEYCOMB_HEIGHT_M = 900;
 // 服务小区的最小地表尺度；每个 footprint 内的整套网格只会等比例放大到内切边界。
 const HONEYCOMB_CELL_RADIUS_M = 120000;
-const HONEYCOMB_UPDATE_INTERVAL_MS = 200;
+// 蜂窝为几何重建而非简单平移；80ms 在 5× 播放下可明显减轻跳变，同时仍保留批量 Primitive 性能收益。
+const HONEYCOMB_UPDATE_INTERVAL_MS = 80;
 const HONEYCOMB_PROJECTION_RAY_HEIGHT_M = 2000000;
 
 // ============= 模型资源 =============
@@ -2048,6 +2049,7 @@ export async function loadSatsimScenario({
   let lastTopologySignature = "";
   let lastAppliedRelativeTime = Number.NaN;
   let lastCoverageRelativeTime = Number.NEGATIVE_INFINITY;
+  let lastCoverageUpdateMs = Number.NEGATIVE_INFINITY;
   let coverageForceRefresh = true;
   let topologyRestoreTimer = null;
 
@@ -2180,21 +2182,29 @@ export async function loadSatsimScenario({
     }
     updatePolylinePrimitivePositions(topologyPolylinePool, trackStore, entityLookup, time, relativeTime);
 
-    updateCoverageVisibility({
-      viewer,
-      coverageDataSource,
-      coveragePrimitiveCollection,
-      leoCoverageRenderer,
-      geoCoverageEntities,
-      entityLookup,
-      accessLinks: collectAccessSatelliteLinks(incrementalState.activeTopology, bundle),
-      time,
-      showCoverage: showCoverage && !miniMode,
-      beamConfig,
-      forceRefresh: coverageForceRefresh || topologyChanged || coverageTimeRewound,
-    });
-    coverageForceRefresh = false;
-    lastCoverageRelativeTime = relativeTime;
+    // 卫星代理、飞机和链路线在每帧更新；只有裁切蜂窝/波束几何按独立频率重建。
+    const coverageNow = (typeof performance !== "undefined" && typeof performance.now === "function")
+      ? performance.now()
+      : Date.now();
+    const coverageForce = coverageForceRefresh || topologyChanged || coverageTimeRewound;
+    if (coverageForce || (coverageNow - lastCoverageUpdateMs) >= HONEYCOMB_UPDATE_INTERVAL_MS) {
+      updateCoverageVisibility({
+        viewer,
+        coverageDataSource,
+        coveragePrimitiveCollection,
+        leoCoverageRenderer,
+        geoCoverageEntities,
+        entityLookup,
+        accessLinks: collectAccessSatelliteLinks(incrementalState.activeTopology, bundle),
+        time,
+        showCoverage: showCoverage && !miniMode,
+        beamConfig,
+        forceRefresh: coverageForce,
+      });
+      coverageForceRefresh = false;
+      lastCoverageRelativeTime = relativeTime;
+      lastCoverageUpdateMs = coverageNow;
+    }
     lastAppliedRelativeTime = relativeTime;
     updateSatelliteModelPool(time);
 
