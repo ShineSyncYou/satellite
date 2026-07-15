@@ -40,7 +40,11 @@ const COVERAGE_COLOR = Cesium.Color.fromCssColorString("#4ea9ff").withAlpha(0.10
 const COVERAGE_OUTLINE_COLOR = Cesium.Color.fromCssColorString("#e8f7ff").withAlpha(0.30);
 const GEO_BEAM_SEGMENT_COUNT = 48;
 const LEO_FOOTPRINT_SEGMENT_COUNT = 48;
-const GEO_BEAM_UPDATE_INTERVAL_MS = 160;
+const GEO_CHANGE_CHECK_INTERVAL_MS = 500;
+const GEO_SUBPOINT_REBUILD_DISTANCE_M = 20000;
+const GEO_ALTITUDE_REBUILD_DISTANCE_M = 20000;
+const GEO_ANGLE_REBUILD_EPSILON_RAD = Cesium.Math.toRadians(0.01);
+const GEO_FOOTPRINT_GRANULARITY_RAD = Cesium.Math.toRadians(2);
 const HONEYCOMB_HEIGHT_M = 900;
 // 服务小区的最小地表尺度；每个 footprint 内的整套网格只会等比例放大到内切边界。
 const HONEYCOMB_CELL_RADIUS_M = 120000;
@@ -827,7 +831,9 @@ function isEarthOccluded(p1, p2) {
 function updatePolylinePrimitivePositions(pool, trackStore, entityLookup, time, relativeTime) {
   for (const polyline of pool) {
     const segment = polyline?._satsimSegment;
-    if (!polyline || !polyline.show || !segment) {
+    // show 会因地球遮挡而临时设为 false；下一时刻仍必须参与计算，
+    // 否则候选拓扑线一旦被遮挡就不会再恢复。
+    if (!polyline || !segment) {
       continue;
     }
 
@@ -863,6 +869,7 @@ function updatePolylinePrimitivePositions(pool, trackStore, entityLookup, time, 
     Cesium.Cartesian3.clone(sourcePosition, polyline._satsimPositions[0]);
     Cesium.Cartesian3.clone(targetPosition, polyline._satsimPositions[1]);
     polyline.positions = polyline._satsimPositions;
+    polyline.show = true;
   }
 }
 
@@ -1090,44 +1097,6 @@ function buildBeamConePrimitive(satellitePosition, footprintPoints) {
     }),
     asynchronous: false,
   });
-}
-
-function removeGeoBeamPrimitive(info, coveragePrimitiveCollection) {
-  if (!info.geoBeamPrimitive) {
-    return;
-  }
-  coveragePrimitiveCollection.remove(info.geoBeamPrimitive);
-  info.geoBeamPrimitive = null;
-  info.geoBeamLastUpdateMs = Number.NEGATIVE_INFINITY;
-}
-
-function syncGeoBeamPrimitive(info, coveragePrimitiveCollection, satellitePosition, footprintPoints, force = false) {
-  if (!satellitePosition) {
-    removeGeoBeamPrimitive(info, coveragePrimitiveCollection);
-    return false;
-  }
-
-  const now = (typeof performance !== "undefined" && typeof performance.now === "function")
-    ? performance.now()
-    : Date.now();
-  if (!force && info.geoBeamPrimitive && (now - info.geoBeamLastUpdateMs) < GEO_BEAM_UPDATE_INTERVAL_MS) {
-    info.geoBeamPrimitive.show = true;
-    return true;
-  }
-
-  const nextPrimitive = buildBeamConePrimitive(satellitePosition, footprintPoints);
-  if (!nextPrimitive) {
-    removeGeoBeamPrimitive(info, coveragePrimitiveCollection);
-    return false;
-  }
-
-  const previousPrimitive = info.geoBeamPrimitive;
-  info.geoBeamPrimitive = coveragePrimitiveCollection.add(nextPrimitive);
-  info.geoBeamLastUpdateMs = now;
-  if (previousPrimitive) {
-    coveragePrimitiveCollection.remove(previousPrimitive);
-  }
-  return true;
 }
 
 function buildHoneycombRing(radius) {
@@ -1665,110 +1634,290 @@ function syncLeoCoverageRenderer({ viewer, renderer, entityLookup, accessLinks, 
   }
 }
 
-function ensureGeoCoverageEntity(coverageDataSource, entityLookup, geoCoverageEntities, accessLink, beamConfig) {
-  const current = geoCoverageEntities.get(accessLink.satId);
+function buildGeoFootprintFillPrimitive(satelliteId, footprintPoints) {
+  if (footprintPoints.length < 3) {
+    return null;
+  }
+  const geometry = new Cesium.PolygonGeometry({
+    polygonHierarchy: new Cesium.PolygonHierarchy(footprintPoints),
+    height: HONEYCOMB_HEIGHT_M,
+    granularity: GEO_FOOTPRINT_GRANULARITY_RAD,
+    vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
+  });
+  return new Cesium.Primitive({
+    geometryInstances: new Cesium.GeometryInstance({
+      id: `geo-footprint:${satelliteId}`,
+      geometry,
+      attributes: {
+        color: Cesium.ColorGeometryInstanceAttribute.fromColor(COVERAGE_COLOR),
+      },
+    }),
+    appearance: new Cesium.PerInstanceColorAppearance({
+      flat: true,
+      translucent: true,
+      closed: false,
+    }),
+    asynchronous: true,
+    show: false,
+  });
+}
+
+function createGeoCoverageRenderer(viewer, coveragePrimitiveCollection) {
+  return {
+    viewer,
+    coveragePrimitiveCollection,
+    outlineCollection: viewer.scene.primitives.add(new Cesium.PolylineCollection()),
+    slots: new Map(),
+    rebuildQueue: [],
+    queuedSatelliteIds: new Set(),
+    lastCheckMs: Number.NEGATIVE_INFINITY,
+  };
+}
+
+function createGeoCoverageSlot(satelliteId, satEntity) {
+  return {
+    satelliteId,
+    satEntity,
+    active: true,
+    fillPrimitive: null,
+    beamPrimitive: null,
+    outlinePolyline: null,
+    lastState: null,
+    pendingFillPrimitive: null,
+    pendingBeamPrimitive: null,
+    pendingOutlinePoints: null,
+    pendingState: null,
+    queuedState: null,
+    queuedForce: false,
+  };
+}
+
+function acquireGeoCoverageSlot(renderer, satelliteId, entityLookup) {
+  const current = renderer.slots.get(satelliteId);
   if (current) {
+    current.active = true;
     return current;
   }
-
-  const satEntity = entityLookup.get(accessLink.satId);
+  const satEntity = entityLookup.get(satelliteId);
   if (!satEntity?.position) {
     return null;
   }
-
-  const footprintEntity = coverageDataSource.entities.add({
-    id: `coverage-footprint:${accessLink.satId}`,
-    show: false,
-    polygon: {
-      hierarchy: new Cesium.ConstantProperty(new Cesium.PolygonHierarchy([])),
-      material: COVERAGE_COLOR,
-      outline: true,
-      outlineColor: COVERAGE_OUTLINE_COLOR,
-      perPositionHeight: false,
-    },
-  });
-
-  const value = {
-    footprintEntity,
-    satEntity,
-    geoBeamPrimitive: null,
-    geoBeamLastUpdateMs: Number.NEGATIVE_INFINITY,
-    visible: false,
-  };
-  geoCoverageEntities.set(accessLink.satId, value);
-  return value;
+  const slot = createGeoCoverageSlot(satelliteId, satEntity);
+  renderer.slots.set(satelliteId, slot);
+  return slot;
 }
 
-function hideGeoCoverageEntity(info, coveragePrimitiveCollection) {
-  info.footprintEntity.show = false;
-  if (info.geoBeamPrimitive) {
-    info.geoBeamPrimitive.show = false;
+function removeGeoSlotPrimitive(renderer, primitive) {
+  if (primitive) {
+    renderer.coveragePrimitiveCollection.remove(primitive);
   }
-  info.visible = false;
 }
 
-function releaseGeoCoverageEntity(coverageDataSource, geoCoverageEntities, satelliteId, coveragePrimitiveCollection) {
-  const info = geoCoverageEntities.get(satelliteId);
-  if (!info) {
+function releaseGeoCoverageSlot(renderer, slot) {
+  slot.active = false;
+  renderer.slots.delete(slot.satelliteId);
+  renderer.queuedSatelliteIds.delete(slot.satelliteId);
+  removeGeoSlotPrimitive(renderer, slot.fillPrimitive);
+  removeGeoSlotPrimitive(renderer, slot.beamPrimitive);
+  removeGeoSlotPrimitive(renderer, slot.pendingFillPrimitive);
+  if (slot.outlinePolyline) {
+    renderer.outlineCollection.remove(slot.outlinePolyline);
+  }
+  slot.fillPrimitive = null;
+  slot.beamPrimitive = null;
+  slot.pendingFillPrimitive = null;
+  slot.pendingBeamPrimitive = null;
+  slot.outlinePolyline = null;
+  slot.pendingState = null;
+  slot.queuedState = null;
+}
+
+function clearGeoCoverageRenderer(renderer) {
+  for (const slot of [...renderer.slots.values()]) {
+    releaseGeoCoverageSlot(renderer, slot);
+  }
+  renderer.rebuildQueue.length = 0;
+  renderer.queuedSatelliteIds.clear();
+}
+
+function createGeoCoverageState(satellitePosition, satelliteId, beamConfig) {
+  const cartographic = Cesium.Ellipsoid.WGS84.cartesianToCartographic(satellitePosition);
+  if (!cartographic) {
+    return null;
+  }
+  const halfAngleRad = effectiveBeamHalfAngleRad(satellitePosition, satelliteId, beamConfig);
+  if (!(halfAngleRad > 0)) {
+    return null;
+  }
+  return {
+    satellitePosition: Cesium.Cartesian3.clone(satellitePosition),
+    subPoint: Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, 0),
+    altitude: cartographic.height,
+    halfAngleRad,
+  };
+}
+
+function geoCoverageStateNeedsRebuild(referenceState, nextState, force = false) {
+  if (force || !referenceState || !nextState) {
+    return true;
+  }
+  return Cesium.Cartesian3.distance(referenceState.subPoint, nextState.subPoint) >= GEO_SUBPOINT_REBUILD_DISTANCE_M
+    || Math.abs(referenceState.altitude - nextState.altitude) >= GEO_ALTITUDE_REBUILD_DISTANCE_M
+    || Math.abs(referenceState.halfAngleRad - nextState.halfAngleRad) >= GEO_ANGLE_REBUILD_EPSILON_RAD;
+}
+
+function queueGeoCoverageRebuild(renderer, slot, state, force = false) {
+  const referenceState = slot.pendingState || slot.lastState;
+  if (!geoCoverageStateNeedsRebuild(referenceState, state, force)) {
     return;
   }
-  removeGeoBeamPrimitive(info, coveragePrimitiveCollection);
-  coverageDataSource.entities.remove(info.footprintEntity);
-  geoCoverageEntities.delete(satelliteId);
+  slot.queuedState = state;
+  slot.queuedForce = slot.queuedForce || force;
+  if (slot.pendingFillPrimitive || renderer.queuedSatelliteIds.has(slot.satelliteId)) {
+    return;
+  }
+  renderer.queuedSatelliteIds.add(slot.satelliteId);
+  renderer.rebuildQueue.push(slot);
 }
 
-function syncGeoCoverageEntity(info, coveragePrimitiveCollection, satellitePosition, satelliteId, beamConfig, force) {
+function syncGeoOutlinePolyline(renderer, slot, outlinePoints) {
+  const closedPositions = outlinePoints.map((point) => Cesium.Cartesian3.clone(point));
+  closedPositions.push(Cesium.Cartesian3.clone(outlinePoints[0]));
+  if (!slot.outlinePolyline) {
+    slot.outlinePolyline = renderer.outlineCollection.add({
+      positions: closedPositions,
+      width: 1,
+      material: Cesium.Material.fromType("Color", { color: Cesium.Color.clone(COVERAGE_OUTLINE_COLOR) }),
+      show: true,
+    });
+    return;
+  }
+  slot.outlinePolyline.positions = closedPositions;
+  slot.outlinePolyline.show = true;
+}
+
+function finalizeGeoCoverageRebuilds(renderer) {
+  for (const slot of renderer.slots.values()) {
+    if (!slot.pendingFillPrimitive?.ready) {
+      continue;
+    }
+    const previousFillPrimitive = slot.fillPrimitive;
+    const previousBeamPrimitive = slot.beamPrimitive;
+    slot.pendingFillPrimitive.show = true;
+    slot.fillPrimitive = slot.pendingFillPrimitive;
+    slot.beamPrimitive = renderer.coveragePrimitiveCollection.add(slot.pendingBeamPrimitive);
+    syncGeoOutlinePolyline(renderer, slot, slot.pendingOutlinePoints);
+    slot.lastState = slot.pendingState;
+    slot.pendingFillPrimitive = null;
+    slot.pendingBeamPrimitive = null;
+    slot.pendingOutlinePoints = null;
+    slot.pendingState = null;
+    removeGeoSlotPrimitive(renderer, previousFillPrimitive);
+    removeGeoSlotPrimitive(renderer, previousBeamPrimitive);
+
+    if (slot.queuedState && geoCoverageStateNeedsRebuild(slot.lastState, slot.queuedState, slot.queuedForce)) {
+      if (!renderer.queuedSatelliteIds.has(slot.satelliteId)) {
+        renderer.queuedSatelliteIds.add(slot.satelliteId);
+        renderer.rebuildQueue.push(slot);
+      }
+    } else {
+      slot.queuedState = null;
+      slot.queuedForce = false;
+    }
+  }
+}
+
+function startNextGeoCoverageRebuild(renderer) {
+  while (renderer.rebuildQueue.length > 0) {
+    const slot = renderer.rebuildQueue.shift();
+    renderer.queuedSatelliteIds.delete(slot.satelliteId);
+    if (!slot.active || slot.pendingFillPrimitive || !slot.queuedState) {
+      continue;
+    }
+    const state = slot.queuedState;
+    slot.queuedState = null;
+    slot.queuedForce = false;
+    const footprintPoints = buildBeamFootprintPoints(
+      state.satellitePosition,
+      state.halfAngleRad,
+      GEO_BEAM_SEGMENT_COUNT,
+    );
+    if (footprintPoints.length < 3) {
+      continue;
+    }
+    const outlinePoints = footprintPoints.map((point) => elevatePositionAboveEllipsoid(point)).filter(Boolean);
+    const fillPrimitive = buildGeoFootprintFillPrimitive(slot.satelliteId, footprintPoints);
+    const beamPrimitive = buildBeamConePrimitive(state.satellitePosition, footprintPoints);
+    if (!fillPrimitive || !beamPrimitive || outlinePoints.length < 3) {
+      continue;
+    }
+    slot.pendingFillPrimitive = renderer.coveragePrimitiveCollection.add(fillPrimitive);
+    slot.pendingBeamPrimitive = beamPrimitive;
+    slot.pendingOutlinePoints = outlinePoints;
+    slot.pendingState = state;
+    break;
+  }
+}
+
+function processGeoCoverageRenderer(renderer) {
+  finalizeGeoCoverageRebuilds(renderer);
+  startNextGeoCoverageRebuild(renderer);
+}
+
+function syncGeoCoverageRenderer({ renderer, entityLookup, accessLinks, time, beamConfig, forceCheck, forceRebuild }) {
   const now = (typeof performance !== "undefined" && typeof performance.now === "function")
     ? performance.now()
     : Date.now();
-  if (!force && info.visible && (now - info.geoBeamLastUpdateMs) < GEO_BEAM_UPDATE_INTERVAL_MS) {
-    info.footprintEntity.show = true;
-    if (info.geoBeamPrimitive) {
-      info.geoBeamPrimitive.show = true;
+  const checkDue = forceCheck || (now - renderer.lastCheckMs) >= GEO_CHANGE_CHECK_INTERVAL_MS;
+  const activeSatelliteIds = new Set();
+
+  for (const accessLink of accessLinks.values()) {
+    if (!isGeoSatelliteId(accessLink.satId)) {
+      continue;
     }
-    return true;
+    const slot = acquireGeoCoverageSlot(renderer, accessLink.satId, entityLookup);
+    if (!slot) {
+      continue;
+    }
+    activeSatelliteIds.add(accessLink.satId);
+    if (!checkDue && (slot.lastState || slot.pendingState || slot.queuedState)) {
+      continue;
+    }
+    const satellitePosition = slot.satEntity.position.getValue(time, scratchSatellitePosition);
+    if (!satellitePosition) {
+      continue;
+    }
+    const state = createGeoCoverageState(satellitePosition, slot.satelliteId, beamConfig);
+    if (state) {
+      queueGeoCoverageRebuild(renderer, slot, state, forceRebuild);
+    }
   }
 
-  const halfAngleRad = effectiveBeamHalfAngleRad(satellitePosition, satelliteId, beamConfig);
-  const footprintPoints = halfAngleRad > 0
-    ? buildBeamFootprintPoints(satellitePosition, halfAngleRad, GEO_BEAM_SEGMENT_COUNT)
-    : [];
-  if (footprintPoints.length < 3) {
-    hideGeoCoverageEntity(info, coveragePrimitiveCollection);
-    return false;
+  for (const [satelliteId, slot] of [...renderer.slots.entries()]) {
+    if (!activeSatelliteIds.has(satelliteId)) {
+      releaseGeoCoverageSlot(renderer, slot);
+    }
   }
-  info.footprintEntity.polygon.hierarchy = new Cesium.ConstantProperty(new Cesium.PolygonHierarchy(footprintPoints));
-  info.footprintEntity.show = true;
-
-  const beamShown = syncGeoBeamPrimitive(
-    info,
-    coveragePrimitiveCollection,
-    satellitePosition,
-    footprintPoints,
-    force || !info.visible,
-  );
-  info.visible = beamShown;
-  return beamShown;
+  if (checkDue) {
+    renderer.lastCheckMs = now;
+  }
 }
 
 function updateCoverageVisibility({
   viewer,
-  coverageDataSource,
-  coveragePrimitiveCollection,
   leoCoverageRenderer,
-  geoCoverageEntities,
+  geoCoverageRenderer,
   entityLookup,
   accessLinks,
   time,
   showCoverage,
   beamConfig,
   forceRefresh,
+  accessChanged,
 }) {
   if (!showCoverage || !beamConfig) {
     clearLeoCoverageRenderer(leoCoverageRenderer);
-    for (const satelliteId of [...geoCoverageEntities.keys()]) {
-      releaseGeoCoverageEntity(coverageDataSource, geoCoverageEntities, satelliteId, coveragePrimitiveCollection);
-    }
+    clearGeoCoverageRenderer(geoCoverageRenderer);
     return;
   }
 
@@ -1781,36 +1930,15 @@ function updateCoverageVisibility({
     beamConfig,
     force: forceRefresh,
   });
-
-  const activeGeoSatelliteIds = new Set();
-  for (const accessLink of accessLinks.values()) {
-    if (!isGeoSatelliteId(accessLink.satId)) {
-      continue;
-    }
-    const info = ensureGeoCoverageEntity(coverageDataSource, entityLookup, geoCoverageEntities, accessLink, beamConfig);
-    if (!info) {
-      continue;
-    }
-    activeGeoSatelliteIds.add(accessLink.satId);
-    const satPosition = info.satEntity.position.getValue(time, scratchSatellitePosition);
-    if (satPosition) {
-      syncGeoCoverageEntity(
-        info,
-        coveragePrimitiveCollection,
-        satPosition,
-        accessLink.satId,
-        beamConfig,
-        forceRefresh,
-      );
-    } else {
-      hideGeoCoverageEntity(info, coveragePrimitiveCollection);
-    }
-  }
-  for (const satelliteId of [...geoCoverageEntities.keys()]) {
-    if (!activeGeoSatelliteIds.has(satelliteId)) {
-      releaseGeoCoverageEntity(coverageDataSource, geoCoverageEntities, satelliteId, coveragePrimitiveCollection);
-    }
-  }
+  syncGeoCoverageRenderer({
+    renderer: geoCoverageRenderer,
+    entityLookup,
+    accessLinks,
+    time,
+    beamConfig,
+    forceCheck: forceRefresh || accessChanged,
+    forceRebuild: forceRefresh,
+  });
 }
 
 function applySatelliteActivityStyles(entityLookup, satellitePrimitiveLookup, lastActiveIds, nextActiveIds) {
@@ -2007,19 +2135,16 @@ export async function loadSatsimScenario({
   });
 
   const entityLookup = buildEntityLookup(dataSource.entities);
-  const coverageDataSource = new Cesium.CustomDataSource("satsim-coverage");
   const satellitePrimitives = createSatellitePointPrimitives(viewer, bundle, trackStore, entityLookup, miniMode);
   const coveragePrimitiveCollection = viewer.scene.primitives.add(new Cesium.PrimitiveCollection());
   const leoCoverageRenderer = createLeoCoverageRenderer(viewer, coveragePrimitiveCollection);
+  const geoCoverageRenderer = createGeoCoverageRenderer(viewer, coveragePrimitiveCollection);
   const routePolylineCollection = viewer.scene.primitives.add(new Cesium.PolylineCollection());
   const topologyPolylineCollection = viewer.scene.primitives.add(new Cesium.PolylineCollection());
   const routePolylinePool = [];
   const topologyPolylinePool = [];
 
-  await viewer.dataSources.add(coverageDataSource);
-
   const incrementalState = createIncrementalState(bundle);
-  const geoCoverageEntities = new Map();
   const activeRouteSatelliteIds = new Set();
   const satelliteStyleOptions = {
     satelliteModelScale,
@@ -2051,7 +2176,8 @@ export async function loadSatsimScenario({
   let lastCoverageRelativeTime = Number.NEGATIVE_INFINITY;
   let lastCoverageUpdateMs = Number.NEGATIVE_INFINITY;
   let coverageForceRefresh = true;
-  let topologyRestoreTimer = null;
+  let coverageAccessLinks = new Map();
+  let coverageAccessSignature = "";
 
   const updateSatelliteModelPool = (time, force = false) => {
     if (!enableSatelliteModelPool) {
@@ -2183,23 +2309,30 @@ export async function loadSatsimScenario({
     updatePolylinePrimitivePositions(topologyPolylinePool, trackStore, entityLookup, time, relativeTime);
 
     // 卫星代理、飞机和链路线在每帧更新；只有裁切蜂窝/波束几何按独立频率重建。
+    let accessChanged = false;
+    if (coverageForceRefresh || topologyChanged || coverageTimeRewound) {
+      const nextAccessLinks = collectAccessSatelliteLinks(incrementalState.activeTopology, bundle);
+      const nextAccessSignature = [...nextAccessLinks.keys()].sort().join(";");
+      accessChanged = nextAccessSignature !== coverageAccessSignature;
+      coverageAccessLinks = nextAccessLinks;
+      coverageAccessSignature = nextAccessSignature;
+    }
     const coverageNow = (typeof performance !== "undefined" && typeof performance.now === "function")
       ? performance.now()
       : Date.now();
-    const coverageForce = coverageForceRefresh || topologyChanged || coverageTimeRewound;
-    if (coverageForce || (coverageNow - lastCoverageUpdateMs) >= HONEYCOMB_UPDATE_INTERVAL_MS) {
+    const coverageForce = coverageForceRefresh || coverageTimeRewound;
+    if (coverageForce || accessChanged || (coverageNow - lastCoverageUpdateMs) >= HONEYCOMB_UPDATE_INTERVAL_MS) {
       updateCoverageVisibility({
         viewer,
-        coverageDataSource,
-        coveragePrimitiveCollection,
         leoCoverageRenderer,
-        geoCoverageEntities,
+        geoCoverageRenderer,
         entityLookup,
-        accessLinks: collectAccessSatelliteLinks(incrementalState.activeTopology, bundle),
+        accessLinks: coverageAccessLinks,
         time,
         showCoverage: showCoverage && !miniMode,
         beamConfig,
         forceRefresh: coverageForce,
+        accessChanged,
       });
       coverageForceRefresh = false;
       lastCoverageRelativeTime = relativeTime;
@@ -2225,40 +2358,12 @@ export async function loadSatsimScenario({
     }
   };
 
-  const onCameraMoveStart = () => {
-    if (topologyRestoreTimer) {
-      clearTimeout(topologyRestoreTimer);
-      topologyRestoreTimer = null;
-    }
-    if (showTopologyLinks && !miniMode) {
-      topologyPolylineCollection.show = false;
-    }
-  };
-
-  const onCameraMoveEnd = () => {
-    if (!showTopologyLinks || miniMode) {
-      return;
-    }
-    if (topologyRestoreTimer) {
-      clearTimeout(topologyRestoreTimer);
-    }
-    topologyRestoreTimer = setTimeout(() => {
-      topologyRestoreTimer = null;
-      if (!viewer || viewer.isDestroyed()) {
-        return;
-      }
-      topologyPolylineCollection.show = true;
-      if (viewer.scene.requestRenderMode) {
-        viewer.scene.requestRender();
-      }
-    }, 200);
-  };
-  viewer.camera.moveStart.addEventListener(onCameraMoveStart);
-  viewer.camera.moveEnd.addEventListener(onCameraMoveEnd);
   if (enableSatelliteModelPool) {
     updateSatelliteModelPool(viewer.clock.currentTime, true);
   }
 
+  const onScenePreUpdate = () => processGeoCoverageRenderer(geoCoverageRenderer);
+  viewer.scene.preUpdate.addEventListener(onScenePreUpdate);
   const onTick = (clock) => updateScene(clock.currentTime);
   viewer.clock.onTick.addEventListener(onTick);
   updateScene(viewer.clock.currentTime);
@@ -2271,13 +2376,8 @@ export async function loadSatsimScenario({
     coverageWarning: beamConfig ? "" : "场景缺少波束参数，请重新生成。",
     cleanup() {
       viewer.clock.onTick.removeEventListener(onTick);
-      viewer.camera.moveStart.removeEventListener(onCameraMoveStart);
-      viewer.camera.moveEnd.removeEventListener(onCameraMoveEnd);
+      viewer.scene.preUpdate.removeEventListener(onScenePreUpdate);
       viewer.trackedEntityChanged.removeEventListener(onTrackedEntityChanged);
-      if (topologyRestoreTimer) {
-        clearTimeout(topologyRestoreTimer);
-        topologyRestoreTimer = null;
-      }
       if (enableSatelliteModelPool) {
         clearSatelliteModels(entityLookup, modeledSatelliteIds);
       }
@@ -2288,8 +2388,9 @@ export async function loadSatsimScenario({
         }
         trackedSatelliteId = "";
       }
-      viewer.dataSources.remove(coverageDataSource, true);
+      clearGeoCoverageRenderer(geoCoverageRenderer);
       viewer.scene.primitives.remove(leoCoverageRenderer.outlineCollection);
+      viewer.scene.primitives.remove(geoCoverageRenderer.outlineCollection);
       viewer.scene.primitives.remove(topologyPolylineCollection);
       viewer.scene.primitives.remove(routePolylineCollection);
       viewer.scene.primitives.remove(coveragePrimitiveCollection);
