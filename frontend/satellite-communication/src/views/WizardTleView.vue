@@ -92,9 +92,7 @@ async function onFilePick(event) {
   if (!file) return;
   fileName.value = file.name;
   tleText.value = await file.text();
-  if (!title.value) {
-    title.value = file.name.replace(/\.(tle|txt)$/i, "");
-  }
+  title.value = file.name.replace(/\.(tle|txt)$/i, "");
 }
 
 function goNext() {
