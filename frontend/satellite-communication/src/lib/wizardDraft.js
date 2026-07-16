@@ -40,7 +40,8 @@ function defaultDraft() {
       timeStepSeconds: 30,
     },
     communicationParams: {
-      satAntennaAngleDeg: 35.0,
+      satAntennaAngleDeg: 24.0,
+      geoSatAntennaAngleDeg: 8.0,
       geoSatAntennaAngleDeg: 8.0,
       bwGslMbps: 150.0,
       bwIslMbps: 500.0,
