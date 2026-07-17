@@ -42,7 +42,6 @@ function defaultDraft() {
     communicationParams: {
       satAntennaAngleDeg: 25.0,
       geoSatAntennaAngleDeg: 8.0,
-      geoSatAntennaAngleDeg: 8.0,
       bwGslMbps: 150.0,
       bwIslMbps: 500.0,
       intraSatelliteBusMbps: 800.0,
