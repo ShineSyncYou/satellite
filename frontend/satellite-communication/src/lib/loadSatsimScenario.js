@@ -13,7 +13,7 @@
  * 6. 支持 2D 平面图和 3D 主屏两种渲染模式
  *
  * 颜色配置：
- * - 卫星：金黄色（#ffd75e），活跃时浅金色（#fff19f）
+ * - 卫星：远景冷白蓝点、中景金属/深蓝 SVG，活跃时使用金色强调
  * - 飞机：青色（#5eead4）
  * - 地面站：橙红色（#ff8c69）
  * - AC→S 链路：浅青色（#72f0ff）
@@ -54,8 +54,19 @@ const HONEYCOMB_PROJECTION_RAY_HEIGHT_M = 2000000;
 
 // ============= 模型资源 =============
 const SATELLITE_MODEL_URI = "/pictures/tdrs.glb";
-const SATELLITE_PROXY_ICON_URI = "/pictures/satellite-proxy.svg";
-const SATELLITE_PROXY_NEAR_DISTANCE_M = 6000000;
+const SATELLITE_LEO_PROXY_ICON_URI = "/pictures/satellite-leo.svg";
+const SATELLITE_LEO_ACTIVE_PROXY_ICON_URI = "/pictures/satellite-leo-active.svg";
+const SATELLITE_GEO_PROXY_ICON_URI = "/pictures/satellite-geo.svg";
+const SATELLITE_GEO_ACTIVE_PROXY_ICON_URI = "/pictures/satellite-geo-active.svg";
+// 远景点与中景图标在这段距离内交叉淡化，避免缩放时突然跳变。
+const SATELLITE_PROXY_FADE_START_DISTANCE_M = 7000000;
+const SATELLITE_PROXY_FADE_END_DISTANCE_M = 10000000;
+const SATELLITE_PROXY_POINT_COLOR = Cesium.Color.fromCssColorString("#b9ddf2");
+const SATELLITE_PROXY_POINT_ACTIVE_COLOR = Cesium.Color.fromCssColorString("#ffd75e");
+const SATELLITE_LEO_PROXY_WIDTH_PX = 54;
+const SATELLITE_LEO_PROXY_HEIGHT_PX = 36;
+const SATELLITE_GEO_PROXY_WIDTH_PX = 42;
+const SATELLITE_GEO_PROXY_HEIGHT_PX = 28;
 const AIRCRAFT_MODEL_URI = "/pictures/Airplane.glb";
 const GROUND_STATION_MODEL_URI = "/pictures/radar.glb";
 const SATELLITE_MODEL_SILHOUETTE_COLOR = Cesium.Color.fromCssColorString("#ffe7a3");
@@ -410,33 +421,60 @@ function createSatellitePointPrimitives(viewer, bundle, trackStore, entityLookup
     }
 
     const position = sampleCompactTrack(track, 0, new Cesium.Cartesian3());
+    const isGeo = isGeoSatelliteId(satId);
+    const defaultImage = isGeo ? SATELLITE_GEO_PROXY_ICON_URI : SATELLITE_LEO_PROXY_ICON_URI;
+    const activeImage = isGeo ? SATELLITE_GEO_ACTIVE_PROXY_ICON_URI : SATELLITE_LEO_ACTIVE_PROXY_ICON_URI;
     const point = pointCollection.add({
       // 代理必须返回原始 Entity，才能保留 Cesium 默认的双击跟踪行为。
       id: entity || satId,
       position,
-      color: SATELLITE_UNIFIED_COLOR,
-      pixelSize: miniMode ? 2 : 1.8,
-      outlineColor: Cesium.Color.BLACK.withAlpha(0.25),
+      color: miniMode ? SATELLITE_UNIFIED_COLOR : SATELLITE_PROXY_POINT_COLOR,
+      pixelSize: miniMode ? 2 : 2,
+      outlineColor: Cesium.Color.BLACK.withAlpha(0.35),
       outlineWidth: 1,
       distanceDisplayCondition: miniMode
         ? undefined
-        : new Cesium.DistanceDisplayCondition(SATELLITE_PROXY_NEAR_DISTANCE_M, Number.MAX_VALUE),
+        : new Cesium.DistanceDisplayCondition(SATELLITE_PROXY_FADE_START_DISTANCE_M, Number.MAX_VALUE),
+      translucencyByDistance: miniMode
+        ? undefined
+        : new Cesium.NearFarScalar(
+          SATELLITE_PROXY_FADE_START_DISTANCE_M,
+          0,
+          SATELLITE_PROXY_FADE_END_DISTANCE_M,
+          1,
+        ),
       show: true,
     });
     const billboard = billboardCollection?.add({
       id: entity || satId,
       position: Cesium.Cartesian3.clone(position),
-      image: SATELLITE_PROXY_ICON_URI,
-      width: 40,
-      height: 26,
-      color: SATELLITE_UNIFIED_COLOR,
+      image: defaultImage,
+      width: isGeo ? SATELLITE_GEO_PROXY_WIDTH_PX : SATELLITE_LEO_PROXY_WIDTH_PX,
+      height: isGeo ? SATELLITE_GEO_PROXY_HEIGHT_PX : SATELLITE_LEO_PROXY_HEIGHT_PX,
+      // 使用白色保持 SVG 自身的金属、太阳翼和强调色，不再整体染成金黄。
+      color: Cesium.Color.WHITE,
       scale: 1,
-      distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, SATELLITE_PROXY_NEAR_DISTANCE_M),
+      scaleByDistance: new Cesium.NearFarScalar(800000, 1.08, SATELLITE_PROXY_FADE_END_DISTANCE_M, 0.55),
+      translucencyByDistance: new Cesium.NearFarScalar(
+        SATELLITE_PROXY_FADE_START_DISTANCE_M,
+        1,
+        SATELLITE_PROXY_FADE_END_DISTANCE_M,
+        0,
+      ),
+      distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, SATELLITE_PROXY_FADE_END_DISTANCE_M),
       horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
       verticalOrigin: Cesium.VerticalOrigin.CENTER,
       show: true,
     }) || null;
-    lookup.set(satId, { point, billboard, detailHidden: false });
+    lookup.set(satId, {
+      point,
+      billboard,
+      defaultImage,
+      activeImage,
+      defaultPointColor: miniMode ? SATELLITE_UNIFIED_COLOR : SATELLITE_PROXY_POINT_COLOR,
+      defaultPointPixelSize: 2,
+      detailHidden: false,
+    });
   }
 
   viewer.scene.primitives.add(collection);
@@ -1959,10 +1997,11 @@ function applySatelliteActivityStyles(entityLookup, satellitePrimitiveLookup, la
     }
     const proxy = satellitePrimitiveLookup?.get(satId);
     if (proxy) {
-      proxy.point.color = SATELLITE_UNIFIED_COLOR;
-      proxy.point.pixelSize = 1.8;
+      proxy.point.color = proxy.defaultPointColor;
+      proxy.point.pixelSize = proxy.defaultPointPixelSize;
       if (proxy.billboard) {
-        proxy.billboard.color = SATELLITE_UNIFIED_COLOR;
+        proxy.billboard.image = proxy.defaultImage;
+        proxy.billboard.color = Cesium.Color.WHITE;
         proxy.billboard.scale = 1;
       }
     }
@@ -1982,11 +2021,12 @@ function applySatelliteActivityStyles(entityLookup, satellitePrimitiveLookup, la
     }
     const proxy = satellitePrimitiveLookup?.get(satId);
     if (proxy) {
-      proxy.point.color = SATELLITE_ACTIVE_COLOR;
-      proxy.point.pixelSize = 2.6;
+      proxy.point.color = SATELLITE_PROXY_POINT_ACTIVE_COLOR;
+      proxy.point.pixelSize = 3.2;
       if (proxy.billboard) {
-        proxy.billboard.color = SATELLITE_ACTIVE_COLOR;
-        proxy.billboard.scale = 1.14;
+        proxy.billboard.image = proxy.activeImage;
+        proxy.billboard.color = Cesium.Color.WHITE;
+        proxy.billboard.scale = 1.12;
       }
     }
   }
