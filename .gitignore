@@ -30,6 +30,7 @@ frontend/**/*.log
 frontend/**/*.err
 frontend/**/*.tsbuildinfo
 frontend/**/.eslintcache
+frontend/**/.codex
 frontend/**/*.timestamp-*-*.mjs
 
 # Editor / OS files under frontend.
