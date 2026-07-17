@@ -457,7 +457,6 @@ export function buildWizardManifest(draft) {
     communicationParams: {
       satAntennaAngleDeg: roundTo(draft.communicationParams?.satAntennaAngleDeg ?? 25, 3),
       geoSatAntennaAngleDeg: roundTo(draft.communicationParams?.geoSatAntennaAngleDeg ?? 8, 3),
-      geoSatAntennaAngleDeg: roundTo(draft.communicationParams?.geoSatAntennaAngleDeg ?? 8, 3),
       bwGslMbps: roundTo(draft.communicationParams?.bwGslMbps ?? 150, 3),
       bwIslMbps: roundTo(draft.communicationParams?.bwIslMbps ?? 500, 3),
       intraSatelliteBusMbps: roundTo(draft.communicationParams?.intraSatelliteBusMbps ?? 800, 3),
