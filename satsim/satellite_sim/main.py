@@ -224,11 +224,9 @@ def _build_metadata(config: SimulationConfig, assets: PreparedSimulationAssets) 
 
 
 def _build_node_tracks(snapshots: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    regular_snapshots = [snapshot for snapshot in snapshots if snapshot.get("sample_type") == "regular"]
-    source_snapshots = regular_snapshots or snapshots
     tracks_by_id: dict[str, dict[str, Any]] = {}
 
-    for snapshot in source_snapshots:
+    for snapshot in snapshots:
         relative_time_s = snapshot["relative_time_s"]
         for node in snapshot["nodes"]:
             node_id = str(node["id"])
