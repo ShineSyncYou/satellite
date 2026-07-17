@@ -183,6 +183,7 @@ import "../Widgets/widgets.css";
 const PLAYBACK_SPEED_OPTIONS = [1, 2, 5, 10];
 const DEFAULT_PLAYBACK_MULTIPLIER = 5;
 const EARTH_SIDEREAL_DAY_SEC = 86164;
+const SATELLITE_DOUBLE_CLICK_RADIUS_PX = 30;
 const SYNC_TICK_THROTTLE_MS = 60;                                     // 副屏同步时刻的节流间隔
 
 // ============= 组件状态 =============
@@ -523,6 +524,41 @@ function clearSelectedEntity() {
   selectedEntityInfo.value = null;
 }
 
+function resolveNearbyVisibleSatelliteEntity(windowPosition) {
+  if (!viewer || viewer.isDestroyed() || !mainScenarioHandle) {
+    return null;
+  }
+  const earthOccluder = new Cesium.Occluder(
+    new Cesium.BoundingSphere(Cesium.Cartesian3.ZERO, Cesium.Ellipsoid.WGS84.maximumRadius),
+    viewer.camera.positionWC,
+  );
+  const radiusSquared = SATELLITE_DOUBLE_CLICK_RADIUS_PX * SATELLITE_DOUBLE_CLICK_RADIUS_PX;
+  const worldPosition = new Cesium.Cartesian3();
+  const screenPosition = new Cesium.Cartesian2();
+  let nearestEntity = null;
+  let nearestDistanceSquared = radiusSquared;
+
+  for (const satelliteId of mainScenarioHandle.bundle.satelliteIds || []) {
+    const entity = mainScenarioHandle.entityLookup.get(satelliteId);
+    const position = entity?.position?.getValue(viewer.clock.currentTime, worldPosition);
+    if (!position || !earthOccluder.isPointVisible(position)) {
+      continue;
+    }
+    const projected = Cesium.SceneTransforms.worldToWindowCoordinates(viewer.scene, position, screenPosition);
+    if (!projected) {
+      continue;
+    }
+    const offsetX = projected.x - windowPosition.x;
+    const offsetY = projected.y - windowPosition.y;
+    const distanceSquared = offsetX * offsetX + offsetY * offsetY;
+    if (distanceSquared <= nearestDistanceSquared) {
+      nearestDistanceSquared = distanceSquared;
+      nearestEntity = entity;
+    }
+  }
+  return nearestEntity;
+}
+
 /**
  * 绑定主屏实体拾取事件：点击卫星/飞机后打开左侧详情。
  */
@@ -567,6 +603,18 @@ function bindEntityPickHandler() {
       refreshSelectedEntityInfo();
     });
   }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+  pickHandler.setInputAction((movement) => {
+    const exactEntityId = resolvePickedEntityId(movement);
+    const exactEntity = exactEntityId
+      && mainScenarioHandle?.bundle?.nodeTypeMap?.get(exactEntityId) === "satellite"
+      ? mainScenarioHandle.entityLookup.get(exactEntityId)
+      : null;
+    const satelliteEntity = exactEntity || resolveNearbyVisibleSatelliteEntity(movement.position);
+    if (satelliteEntity) {
+      viewer.trackedEntity = satelliteEntity;
+    }
+  }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
 
 }
 

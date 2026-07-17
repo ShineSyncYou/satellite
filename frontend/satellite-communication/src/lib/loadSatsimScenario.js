@@ -427,8 +427,8 @@ function createSatellitePointPrimitives(viewer, bundle, trackStore, entityLookup
       id: entity || satId,
       position: Cesium.Cartesian3.clone(position),
       image: SATELLITE_PROXY_ICON_URI,
-      width: 28,
-      height: 18,
+      width: 40,
+      height: 26,
       color: SATELLITE_UNIFIED_COLOR,
       scale: 1,
       distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, SATELLITE_PROXY_NEAR_DISTANCE_M),
@@ -436,7 +436,7 @@ function createSatellitePointPrimitives(viewer, bundle, trackStore, entityLookup
       verticalOrigin: Cesium.VerticalOrigin.CENTER,
       show: true,
     }) || null;
-    lookup.set(satId, { point, billboard });
+    lookup.set(satId, { point, billboard, detailHidden: false });
   }
 
   viewer.scene.primitives.add(collection);
@@ -459,10 +459,10 @@ function updateSatellitePointPrimitives(primitiveLookup, trackStore, relativeTim
     // 先用 scratch 采样，再 clone 生成新引用触发 setter 更新。
     const position = sampleCompactTrack(track, relativeTime, scratchSatellitePosition);
     proxy.point.position = Cesium.Cartesian3.clone(position);
-    proxy.point.show = true;
+    proxy.point.show = !proxy.detailHidden;
     if (proxy.billboard) {
       proxy.billboard.position = Cesium.Cartesian3.clone(position);
-      proxy.billboard.show = true;
+      proxy.billboard.show = !proxy.detailHidden;
     }
   }
 }
@@ -2232,6 +2232,14 @@ export async function loadSatsimScenario({
       if (previousEntity) {
         previousEntity.model = undefined;
       }
+      const previousProxy = satellitePrimitives.lookup.get(trackedSatelliteId);
+      if (previousProxy) {
+        previousProxy.detailHidden = false;
+        previousProxy.point.show = true;
+        if (previousProxy.billboard) {
+          previousProxy.billboard.show = true;
+        }
+      }
     }
 
     trackedSatelliteId = nextSatelliteId;
@@ -2243,6 +2251,14 @@ export async function loadSatsimScenario({
     if (!entity) {
       trackedSatelliteId = "";
       return;
+    }
+    const trackedProxy = satellitePrimitives.lookup.get(trackedSatelliteId);
+    if (trackedProxy) {
+      trackedProxy.detailHidden = true;
+      trackedProxy.point.show = false;
+      if (trackedProxy.billboard) {
+        trackedProxy.billboard.show = false;
+      }
     }
     applySatelliteModel(entity, satelliteDetailStyleOptions);
   };
