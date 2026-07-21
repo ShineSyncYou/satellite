@@ -15,6 +15,7 @@ dist-ssr
 coverage
 .generated-simulations
 *.local
+.codex
 
 # Editor directories and files
 .vscode/*
