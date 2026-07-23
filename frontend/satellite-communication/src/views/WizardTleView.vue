@@ -16,11 +16,14 @@
         <span>04 仿真参数</span>
       </div>
 
-      <label class="upload-card upload-card--large">
-        <span class="upload-card__label">TLE 文件</span>
+      <label class="upload-card tle-file-picker">
         <input name="tleFile" type="file" accept=".tle,.txt" @change="onFilePick" />
-        <strong>{{ fileName || "选择 TLE 文件" }}</strong>
-        <small>支持 `.txt`、`.tle` 或原始 Two-Line Element 文本。</small>
+        <span class="tle-file-picker__button">选择 TLE 文件</span>
+        <span class="tle-file-picker__content">
+          <span class="upload-card__label">TLE 文件</span>
+          <strong>{{ fileName || "尚未选择文件" }}</strong>
+          <small>支持 `.txt`、`.tle` 或原始 Two-Line Element 文本。</small>
+        </span>
       </label>
 
       <label class="v2-field">
@@ -128,5 +131,73 @@ function goNext() {
 
 .wizard-tle-textarea {
   resize: none;
+}
+
+.tle-file-picker {
+  position: relative;
+  display: flex;
+  min-height: 108px;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 20px;
+  border: 1px solid rgba(137, 206, 255, 0.2);
+  border-radius: 16px;
+  background: linear-gradient(110deg, rgba(15, 39, 60, 0.74), rgba(7, 21, 36, 0.7));
+  box-shadow: none;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.tle-file-picker:hover,
+.tle-file-picker:focus-within {
+  border-color: rgba(73, 185, 255, 0.58);
+  background: linear-gradient(110deg, rgba(18, 49, 74, 0.84), rgba(7, 24, 40, 0.8));
+}
+
+.tle-file-picker input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.tle-file-picker__button {
+  display: inline-flex;
+  min-width: 126px;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 15px;
+  border: 1px solid rgba(137, 206, 255, 0.3);
+  border-radius: 10px;
+  background: rgba(36, 179, 255, 0.12);
+  color: #c3e9ff;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tle-file-picker__content {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.tle-file-picker__content strong {
+  overflow-wrap: anywhere;
+}
+
+.tle-file-picker__content small {
+  color: var(--v2-text-muted);
+}
+
+@media (max-width: 640px) {
+  .tle-file-picker {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
 }
 </style>
