@@ -83,6 +83,9 @@ const DEFAULT_AIRCRAFT_MODEL_MAXIMUM_SCALE = 90000;
 // 在 50 km～5000 km 内按对数高度平滑插值，匹配地图的指数缩放手感。
 const AIRCRAFT_SIZE_NEAR_CAMERA_HEIGHT_M = 50000;
 const AIRCRAFT_SIZE_FAR_CAMERA_HEIGHT_M = 9000000;
+const GROUND_STATION_MODEL_MIN_PIXEL_SIZE = 38;
+// 超过 5000 km 后按高度反比缩小 minimumPixelSize，固定地面站的世界尺度。
+const GROUND_STATION_SCALE_FREEZE_CAMERA_HEIGHT_M = 5000000;
 
 // ============= 临时计算对象（避免频繁 new，提升性能）=============
 const scratchSourcePosition = new Cesium.Cartesian3();
@@ -125,6 +128,16 @@ function aircraftMinPixelSizeForCamera(viewer, nearPixelSize, farPixelSize) {
     farPixelSize,
     smoothHeightRatio,
   );
+}
+
+function groundStationMinPixelSizeForCamera(viewer) {
+  const cameraHeight = Number(viewer?.camera?.positionCartographic?.height);
+  if (!Number.isFinite(cameraHeight) || cameraHeight <= GROUND_STATION_SCALE_FREEZE_CAMERA_HEIGHT_M) {
+    return GROUND_STATION_MODEL_MIN_PIXEL_SIZE;
+  }
+  return GROUND_STATION_MODEL_MIN_PIXEL_SIZE
+    * GROUND_STATION_SCALE_FREEZE_CAMERA_HEIGHT_M
+    / cameraHeight;
 }
 
 /**
@@ -324,6 +337,10 @@ function styleEntities(dataSource, bundle, options) {
     ),
     false,
   );
+  const groundStationMinimumPixelSize = new Cesium.CallbackProperty(
+    () => groundStationMinPixelSizeForCamera(options.viewer),
+    false,
+  );
 
   for (const entity of dataSource.entities.values) {
     if (entity.id === "document") {
@@ -425,9 +442,10 @@ function styleEntities(dataSource, bundle, options) {
       if (!options.miniMode) {
         ensureModel(entity, GROUND_STATION_MODEL_URI, {
           scale: 0.95,
-          minimumPixelSize: 38,
+          minimumPixelSize: GROUND_STATION_MODEL_MIN_PIXEL_SIZE,
           maximumScale: 6000,
         });
+        entity.model.minimumPixelSize = groundStationMinimumPixelSize;
         entity.model.show = new Cesium.ConstantProperty(true);
       } else {
         entity.model = undefined;
