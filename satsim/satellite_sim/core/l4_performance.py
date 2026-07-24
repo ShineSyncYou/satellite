@@ -87,7 +87,7 @@ class PerformanceLayer:
             link_overhead_delay_s = 0.0
             end_to_end_success = 1.0
             end_to_end_clean_bits = 1.0
-            access_queue_success = 1.0
+            end_to_end_queue_success = 1.0
 
             for idx in range(len(route.path) - 1):
                 key = _edge_key(route.path[idx], route.path[idx + 1])
@@ -107,9 +107,9 @@ class PerformanceLayer:
 
                 if edge.edge_type == "GSL":
                     link_overhead_delay_s += self.gsl_access_delay_ms / 1000.0
-                    access_queue_success *= max(0.0, 1.0 - congestion_loss)
                 else:
                     link_overhead_delay_s += self.isl_processing_delay_ms / 1000.0
+                end_to_end_queue_success *= max(0.0, 1.0 - congestion_loss)
 
                 physical_loss = 1.0 - math.pow(max(0.0, 1.0 - ber), self.packet_size_bits)
                 link_loss = 1.0 - ((1.0 - physical_loss) * (1.0 - congestion_loss))
@@ -127,7 +127,7 @@ class PerformanceLayer:
                 + endpoint_processing_delay_s
                 + satellite_processing_delay_s
             ) * 1000.0
-            effective_bandwidth_mbps = route.rate_mbps * access_queue_success
+            effective_bandwidth_mbps = route.rate_mbps * end_to_end_queue_success
             metrics.append(
                 EndToEndMetric(
                     source=route.source,

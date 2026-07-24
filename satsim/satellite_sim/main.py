@@ -224,9 +224,11 @@ def _build_metadata(config: SimulationConfig, assets: PreparedSimulationAssets) 
 
 
 def _build_node_tracks(snapshots: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    regular_snapshots = [snapshot for snapshot in snapshots if snapshot.get("sample_type") == "regular"]
+    source_snapshots = regular_snapshots or snapshots
     tracks_by_id: dict[str, dict[str, Any]] = {}
 
-    for snapshot in snapshots:
+    for snapshot in source_snapshots:
         relative_time_s = snapshot["relative_time_s"]
         for node in snapshot["nodes"]:
             node_id = str(node["id"])
@@ -474,10 +476,16 @@ def _collect_snapshots(config: SimulationConfig, assets: PreparedSimulationAsset
         isl_global_neighbor_count=config.isl_global_neighbor_count,
         isl_same_plane_neighbor_count=config.isl_same_plane_neighbor_count,
         isl_adjacent_plane_neighbor_count=config.isl_adjacent_plane_neighbor_count,
+        geo_isl_max_distance_km=config.geo_isl_max_distance_km,
+        geo_isl_neighbor_count=config.geo_isl_neighbor_count,
         isl_require_los=config.isl_require_los,
         isl_cross_plane_high_latitude_limit_deg=config.isl_cross_plane_high_latitude_limit_deg,
         isl_block_seam_cross_plane=config.isl_block_seam_cross_plane,
         routing_switching_cost_km=config.routing_switching_cost_km,
+        packet_size_bits=config.packet_size_bits,
+        signal_speed_km_s=config.signal_speed_km_s,
+        gsl_access_delay_ms=config.gsl_access_delay_ms,
+        isl_processing_delay_ms=config.isl_processing_delay_ms,
     )
     l4_performance = PerformanceLayer(
         config.rain_fade_intensity,

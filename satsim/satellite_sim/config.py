@@ -46,6 +46,8 @@ class SimulationConfig:
     traffic_demands: list[TrafficDemand]
     geo_sat_antenna_angle: float | None = None
     bw_geo_gsl: float | None = None
+    geo_isl_max_distance_km: float | None = None
+    geo_isl_neighbor_count: int = 2
     isl_mode: str = "static-grid"
     isl_max_distance_km: float | None = None
     isl_global_neighbor_count: int = 4
@@ -158,6 +160,12 @@ def load_simulation_config(config_path: str | Path) -> SimulationConfig:
             if raw.get("bw_geo_gsl") is not None
             else None
         ),
+        geo_isl_max_distance_km=(
+            float(raw["geo_isl_max_distance_km"])
+            if raw.get("geo_isl_max_distance_km") is not None
+            else None
+        ),
+        geo_isl_neighbor_count=int(raw.get("geo_isl_neighbor_count", 2)),
         bw_isl=float(raw["bw_isl"]),
         isl_mode=str(raw.get("isl_mode", "static-grid")),
         isl_max_distance_km=(float(raw["isl_max_distance_km"]) if raw.get("isl_max_distance_km") is not None else None),

@@ -5,7 +5,7 @@
         <div>
           <p class="page-eyebrow">轨道数据导入</p>
           <h1 class="page-title">步骤 1 · TLE 导入</h1>
-          <p class="page-subtitle">上传 `.tle/.txt` 文件或直接粘贴 TLE 内容，首版仅接受满足 Walker/GW2 命名规则的星座名称。</p>
+          <p class="page-subtitle">上传 `.tle/.txt` 文件或直接粘贴 TLE 内容，低轨名称使用 PREFIX_轨道面_槽位，高轨名称使用 PREFIX_GEO_编号。</p>
         </div>
       </div>
 

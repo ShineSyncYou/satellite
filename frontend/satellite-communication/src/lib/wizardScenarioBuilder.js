@@ -42,7 +42,7 @@ export const WEATHER_PRESET_OPTIONS = Object.freeze([
 ]);
 
 const AUTO_TLE_NAME_PATTERN = /^(?<prefix>[A-Za-z0-9]+)_(?<plane>\d+)_(?<slot>\d+)$/;
-const AUTO_TLE_GEO_NAME_PATTERN = /^(?<prefix>[A-Za-z0-9]+)_GEO$/i;
+const AUTO_TLE_GEO_NAME_PATTERN = /^(?<prefix>[A-Za-z0-9]+)_GEO(?:_(?<index>\d+))?$/i;
 
 function roundTo(value, digits = 6) {
   return Number(Number(value).toFixed(digits));
@@ -123,8 +123,9 @@ export function parseTleCatalog(tleText) {
 }
 
 export function validateAutoWalkerTle(tleText) {
+  let satellites = [];
   try {
-    const satellites = parseTleCatalog(tleText);
+    satellites = parseTleCatalog(tleText);
     const sampleNames = satellites.slice(0, 5).map((item) => item.name);
     const unmatched = satellites.find((item) => (
       !AUTO_TLE_NAME_PATTERN.test(item.name)
@@ -133,11 +134,13 @@ export function validateAutoWalkerTle(tleText) {
     if (unmatched) {
       return {
         isValid: false,
-        message: `卫星名称 ${unmatched.name} 不满足自动映射规则，要求形如 PREFIX_轨道面_槽位。`,
+        message: `卫星名称 ${unmatched.name} 不满足自动映射规则，要求形如 PREFIX_轨道面_槽位或 PREFIX_GEO_编号。`,
         satelliteCount: satellites.length,
         sampleNames,
       };
     }
+
+    buildAutoSatMappingFromCatalog(satellites);
 
     return {
       isValid: true,
@@ -149,34 +152,75 @@ export function validateAutoWalkerTle(tleText) {
     return {
       isValid: false,
       message: error instanceof Error ? error.message : "TLE 校验失败。",
-      satelliteCount: 0,
-      sampleNames: [],
+      satelliteCount: satellites.length,
+      sampleNames: satellites.slice(0, 5).map((item) => item.name),
     };
   }
 }
 
-export function buildAutoSatMapping(tleText) {
-  const satellites = parseTleCatalog(tleText);
+function buildAutoSatMappingFromCatalog(satellites) {
   const mapping = {};
-  let geoIndex = 0;
+  const names = new Set();
+  const mappedIds = new Map();
+  const geoSatellites = satellites
+    .map((satellite) => ({
+      satellite,
+      match: satellite.name.match(AUTO_TLE_GEO_NAME_PATTERN),
+    }))
+    .filter((item) => item.match);
+  const legacyGeoSatellites = geoSatellites.filter((item) => !item.match.groups?.index);
+
+  if (legacyGeoSatellites.length > 0 && geoSatellites.length > 1) {
+    throw new Error(
+      `高轨卫星 ${legacyGeoSatellites[0].satellite.name} 缺少编号；包含多颗高轨时请使用 PREFIX_GEO_1、PREFIX_GEO_2 等名称。`,
+    );
+  }
 
   for (const satellite of satellites) {
-    if (AUTO_TLE_GEO_NAME_PATTERN.test(satellite.name)) {
-      geoIndex += 1;
-      mapping[satellite.name] = `sat_geo_${geoIndex}`;
-      continue;
+    if (names.has(satellite.name)) {
+      throw new Error(`TLE 中存在重复卫星名称 ${satellite.name}。`);
+    }
+    names.add(satellite.name);
+
+    const geoMatch = satellite.name.match(AUTO_TLE_GEO_NAME_PATTERN);
+    let mappedId;
+    if (geoMatch?.groups) {
+      const geoIndex = geoMatch.groups.index == null ? 1 : Number(geoMatch.groups.index);
+      if (!Number.isSafeInteger(geoIndex) || geoIndex <= 0) {
+        throw new Error(`高轨卫星名称 ${satellite.name} 的编号必须是大于 0 的整数。`);
+      }
+      mappedId = `sat_geo_${geoIndex}`;
+    } else {
+      const match = satellite.name.match(AUTO_TLE_NAME_PATTERN);
+      if (!match?.groups) {
+        throw new Error(`卫星名称 ${satellite.name} 无法自动生成 sat_mapping。`);
+      }
+      const plane = Number(match.groups.plane);
+      const slot = Number(match.groups.slot);
+      mappedId = `sat_${plane}_${slot}`;
     }
 
-    const match = satellite.name.match(AUTO_TLE_NAME_PATTERN);
-    if (!match?.groups) {
-      throw new Error(`卫星名称 ${satellite.name} 无法自动生成 sat_mapping。`);
+    const existingName = mappedIds.get(mappedId);
+    if (existingName) {
+      throw new Error(`卫星名称 ${existingName} 与 ${satellite.name} 都映射到 ${mappedId}，请修改重复编号。`);
     }
-    const plane = Number(match.groups.plane);
-    const slot = Number(match.groups.slot);
-    mapping[satellite.name] = `sat_${plane}_${slot}`;
+    mappedIds.set(mappedId, satellite.name);
+    mapping[satellite.name] = mappedId;
   }
 
   return mapping;
+}
+
+export function buildAutoSatMapping(tleText) {
+  const satellites = parseTleCatalog(tleText);
+  const unmatched = satellites.find((item) => (
+    !AUTO_TLE_NAME_PATTERN.test(item.name)
+    && !AUTO_TLE_GEO_NAME_PATTERN.test(item.name)
+  ));
+  if (unmatched) {
+    throw new Error(`卫星名称 ${unmatched.name} 无法自动生成 sat_mapping。`);
+  }
+  return buildAutoSatMappingFromCatalog(satellites);
 }
 
 function safeBuildAutoSatMapping(tleText) {

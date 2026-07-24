@@ -13,6 +13,7 @@ LOGGER = logging.getLogger(__name__)
 SAT_ID_PATTERN = re.compile(r"^sat_(\d+)_(\d+)$")
 GEO_SAT_ID_PATTERN = re.compile(r"^sat_geo_\d+$")
 EARTH_RADIUS_KM = 6378.137
+MAX_GEO_ISL_NEIGHBORS = 2
 
 
 def is_geo_satellite_id(sat_id: str) -> bool:
@@ -57,10 +58,16 @@ class RoutingEngine:
         isl_global_neighbor_count: int = 4,
         isl_same_plane_neighbor_count: int = 2,
         isl_adjacent_plane_neighbor_count: int = 1,
+        geo_isl_max_distance_km: float | None = None,
+        geo_isl_neighbor_count: int = MAX_GEO_ISL_NEIGHBORS,
         isl_require_los: bool = True,
         isl_cross_plane_high_latitude_limit_deg: float | None = None,
         isl_block_seam_cross_plane: bool = False,
         routing_switching_cost_km: float = 0.0,
+        packet_size_bits: int = 12000,
+        signal_speed_km_s: float = 299792.458,
+        gsl_access_delay_ms: float = 8.0,
+        isl_processing_delay_ms: float = 1.5,
     ) -> None:
         self.bw_isl = bw_isl
         self.satellite_ids = sorted(satellite_ids)
@@ -69,6 +76,15 @@ class RoutingEngine:
         self.isl_global_neighbor_count = max(0, isl_global_neighbor_count)
         self.isl_same_plane_neighbor_count = max(0, isl_same_plane_neighbor_count)
         self.isl_adjacent_plane_neighbor_count = max(0, isl_adjacent_plane_neighbor_count)
+        self.geo_isl_max_distance_km = (
+            max(0.0, float(geo_isl_max_distance_km))
+            if geo_isl_max_distance_km is not None
+            else None
+        )
+        self.geo_isl_neighbor_count = min(
+            MAX_GEO_ISL_NEIGHBORS,
+            max(0, int(geo_isl_neighbor_count)),
+        )
         self.isl_require_los = isl_require_los
         self.isl_cross_plane_high_latitude_limit_deg = (
             abs(float(isl_cross_plane_high_latitude_limit_deg))
@@ -77,6 +93,10 @@ class RoutingEngine:
         )
         self.isl_block_seam_cross_plane = bool(isl_block_seam_cross_plane)
         self.routing_switching_cost_km = max(0.0, float(routing_switching_cost_km))
+        self.packet_size_bits = max(1, int(packet_size_bits))
+        self.signal_speed_km_s = max(1.0, float(signal_speed_km_s))
+        self.gsl_access_delay_ms = max(0.0, float(gsl_access_delay_ms))
+        self.isl_processing_delay_ms = max(0.0, float(isl_processing_delay_ms))
         self.static_isl_pairs = self._build_isl_pairs(self.satellite_ids)
         self.last_satellite_ids: list[str] = []
         self.last_satellite_distance_matrix: np.ndarray | None = None
@@ -93,17 +113,48 @@ class RoutingEngine:
     def _edge_weight_with_switching_cost(
         self,
         previous_edge_keys: set[tuple[str, str]],
+        demand_rate_mbps: float,
     ):
-        def _weight(source: str, target: str, attrs: dict[str, float]) -> float:
+        def _weight(source: str, target: str, attrs: dict[str, object]) -> float:
             distance = float(attrs.get("distance", attrs.get("weight", 0.0)))
-            if self.routing_switching_cost_km <= 0.0:
-                return distance
+            capacity = float(attrs.get("capacity", 0.0))
+            if capacity <= 0.0:
+                return float("inf")
+
+            reserved_traffic = float(attrs.get("reserved_traffic_mbps", 0.0))
+            projected_utilization = (reserved_traffic + max(0.0, demand_rate_mbps)) / capacity
+            service_time_ms = self.packet_size_bits / (capacity * 1e6) * 1000.0
+            propagation_time_ms = distance / self.signal_speed_km_s * 1000.0
+            if projected_utilization >= 1.0:
+                queue_time_ms = 1000.0
+            else:
+                queue_time_ms = service_time_ms * (
+                    projected_utilization / max(0.01, 1.0 - projected_utilization)
+                )
+
+            edge_type = str(attrs.get("edge_type", ""))
+            link_overhead_ms = (
+                self.gsl_access_delay_ms
+                if edge_type == "GSL"
+                else self.isl_processing_delay_ms
+            )
 
             edge_key = tuple(sorted((str(source), str(target))))
-            if edge_key in previous_edge_keys:
-                return distance
+            switching_time_ms = 0.0
+            if edge_key not in previous_edge_keys:
+                switching_time_ms = (
+                    self.routing_switching_cost_km
+                    / self.signal_speed_km_s
+                    * 1000.0
+                )
 
-            return distance + self.routing_switching_cost_km
+            return (
+                propagation_time_ms
+                + service_time_ms
+                + queue_time_ms
+                + link_overhead_ms
+                + switching_time_ms
+            )
 
         return _weight
 
@@ -380,6 +431,13 @@ class RoutingEngine:
             ):
                 continue
             distance = _edge_distance(node_lookup, source, target)
+            if self.isl_max_distance_km is not None and distance > self.isl_max_distance_km:
+                continue
+            if self.isl_require_los and not _has_line_of_sight(
+                node_lookup[source].ecef,
+                node_lookup[target].ecef,
+            ):
+                continue
             frame_isl_edges.append(
                 Edge(
                     source=source,
@@ -394,30 +452,56 @@ class RoutingEngine:
         return frame_isl_edges
 
     def _build_geo_isl_edges(self, node_lookup: dict[str, Node]) -> list[Edge]:
-        geo_satellite_ids = [
+        geo_satellite_ids = sorted(
             sat_id
             for sat_id in self.satellite_ids
             if is_geo_satellite_id(sat_id) and sat_id in node_lookup
-        ]
-        if len(geo_satellite_ids) < 2:
+        )
+        if len(geo_satellite_ids) < 2 or self.geo_isl_neighbor_count <= 0:
             return []
 
-        edges: list[Edge] = []
+        candidate_pairs: list[tuple[float, str, str]] = []
         for source_index, source in enumerate(geo_satellite_ids):
             for target in geo_satellite_ids[source_index + 1:]:
                 source_node = node_lookup[source]
                 target_node = node_lookup[target]
                 if self.isl_require_los and not _has_line_of_sight(source_node.ecef, target_node.ecef):
                     continue
-                edges.append(
-                    Edge(
-                        source=source,
-                        target=target,
-                        edge_type="ISL",
-                        distance=_edge_distance(node_lookup, source, target),
-                        capacity=self.bw_isl,
+
+                distance = _edge_distance(node_lookup, source, target)
+                if (
+                    self.geo_isl_max_distance_km is not None
+                    and distance > self.geo_isl_max_distance_km
+                ):
+                    continue
+                candidate_pairs.append(
+                    (
+                        distance,
+                        source,
+                        target,
                     )
                 )
+
+        neighbor_counts = {sat_id: 0 for sat_id in geo_satellite_ids}
+        edges: list[Edge] = []
+        for distance, source, target in sorted(candidate_pairs):
+            if neighbor_counts[source] >= self.geo_isl_neighbor_count:
+                continue
+            if neighbor_counts[target] >= self.geo_isl_neighbor_count:
+                continue
+
+            neighbor_counts[source] += 1
+            neighbor_counts[target] += 1
+            edges.append(
+                Edge(
+                    source=source,
+                    target=target,
+                    edge_type="ISL",
+                    distance=distance,
+                    capacity=self.bw_isl,
+                )
+            )
+
         return edges
 
     def _build_frame_graph(self, frame_isl_edges: list[Edge], gsl_edges: list[Edge]) -> nx.Graph:
@@ -431,6 +515,7 @@ class RoutingEngine:
                 capacity=edge.capacity,
                 distance=edge.distance,
                 weight=edge.distance,
+                reserved_traffic_mbps=0.0,
             )
         return graph
 
@@ -462,8 +547,13 @@ class RoutingEngine:
                     graph,
                     demand.source,
                     demand.target,
-                    weight=self._edge_weight_with_switching_cost(previous_edge_keys),
+                    weight=self._edge_weight_with_switching_cost(
+                        previous_edge_keys,
+                        demand.rate_mbps,
+                    ),
                 )
+                for source, target in zip(path, path[1:]):
+                    graph[source][target]["reserved_traffic_mbps"] += demand.rate_mbps
                 routes.append(
                     RoutePlan(
                         source=demand.source,
