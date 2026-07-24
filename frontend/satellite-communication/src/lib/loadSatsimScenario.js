@@ -30,6 +30,8 @@ const SATELLITE_UNIFIED_COLOR = Cesium.Color.fromCssColorString("#ffd75e");
 const SATELLITE_ACTIVE_COLOR = Cesium.Color.fromCssColorString("#fff19f");
 const AIRCRAFT_COLOR = Cesium.Color.fromCssColorString("#5eead4");
 const GROUND_STATION_COLOR = Cesium.Color.fromCssColorString("#ff8c69");
+const AIRCRAFT_LABEL_COLOR = Cesium.Color.fromCssColorString("#a7fff3");
+const GROUND_STATION_LABEL_COLOR = Cesium.Color.fromCssColorString("#ffd0b8");
 const LINK_IDLE_COLOR = Cesium.Color.fromCssColorString("#4ade80");
 const LINK_BUSY_COLOR = Cesium.Color.fromCssColorString("#facc15");
 const LINK_CONGESTED_COLOR = Cesium.Color.fromCssColorString("#ef4444");
@@ -70,6 +72,17 @@ const SATELLITE_GEO_PROXY_HEIGHT_PX = 28;
 const AIRCRAFT_MODEL_URI = "/pictures/Airplane.glb";
 const GROUND_STATION_MODEL_URI = "/pictures/radar.glb";
 const SATELLITE_MODEL_SILHOUETTE_COLOR = Cesium.Color.fromCssColorString("#ffe7a3");
+// 飞机尺寸集中配置：scale 控制物理模型大小，近/远像素值控制地图缩放时的视觉尺寸。
+const DEFAULT_AIRCRAFT_MODEL_SCALE = 90;
+const DEFAULT_AIRCRAFT_MODEL_MIN_PIXEL_SIZE = 64;
+// 仅控制近景端点：1.45 表示近景尺寸为远景尺寸的 1.45 倍，远景尺寸不受影响。
+const AIRCRAFT_SIZE_NEAR_MULTIPLIER = 2.5;
+const DEFAULT_AIRCRAFT_MODEL_NEAR_PIXEL_SIZE =
+  DEFAULT_AIRCRAFT_MODEL_MIN_PIXEL_SIZE * AIRCRAFT_SIZE_NEAR_MULTIPLIER;
+const DEFAULT_AIRCRAFT_MODEL_MAXIMUM_SCALE = 90000;
+// 在 50 km～5000 km 内按对数高度平滑插值，匹配地图的指数缩放手感。
+const AIRCRAFT_SIZE_NEAR_CAMERA_HEIGHT_M = 50000;
+const AIRCRAFT_SIZE_FAR_CAMERA_HEIGHT_M = 9000000;
 
 // ============= 临时计算对象（避免频繁 new，提升性能）=============
 const scratchSourcePosition = new Cesium.Cartesian3();
@@ -88,6 +101,30 @@ const scratchPrimitiveTargetPosition = new Cesium.Cartesian3();
  */
 function cloneTime(value) {
   return Cesium.JulianDate.clone(value, new Cesium.JulianDate());
+}
+
+function aircraftMinPixelSizeForCamera(viewer, nearPixelSize, farPixelSize) {
+  const cameraHeight = Number(viewer?.camera?.positionCartographic?.height);
+  if (!Number.isFinite(cameraHeight)) {
+    return farPixelSize;
+  }
+  const clampedHeight = Cesium.Math.clamp(
+    cameraHeight,
+    AIRCRAFT_SIZE_NEAR_CAMERA_HEIGHT_M,
+    AIRCRAFT_SIZE_FAR_CAMERA_HEIGHT_M,
+  );
+  const heightRatio = (
+    Math.log(clampedHeight) - Math.log(AIRCRAFT_SIZE_NEAR_CAMERA_HEIGHT_M)
+  ) / (
+    Math.log(AIRCRAFT_SIZE_FAR_CAMERA_HEIGHT_M)
+      - Math.log(AIRCRAFT_SIZE_NEAR_CAMERA_HEIGHT_M)
+  );
+  const smoothHeightRatio = heightRatio * heightRatio * (3 - 2 * heightRatio);
+  return Cesium.Math.lerp(
+    nearPixelSize,
+    farPixelSize,
+    smoothHeightRatio,
+  );
 }
 
 /**
@@ -279,6 +316,15 @@ function applySatelliteModel(entity, options) {
 }
 
 function styleEntities(dataSource, bundle, options) {
+  const aircraftMinimumPixelSize = new Cesium.CallbackProperty(
+    () => aircraftMinPixelSizeForCamera(
+      options.viewer,
+      options.aircraftModelNearPixelSize,
+      options.aircraftModelMinPixelSize,
+    ),
+    false,
+  );
+
   for (const entity of dataSource.entities.values) {
     if (entity.id === "document") {
       continue;
@@ -349,17 +395,20 @@ function styleEntities(dataSource, bundle, options) {
           maximumScale: options.aircraftModelMaximumScale,
         });
         entity.model.scale = new Cesium.ConstantProperty(options.aircraftModelScale);
-        entity.model.minimumPixelSize = new Cesium.ConstantProperty(options.aircraftModelMinPixelSize);
+        entity.model.minimumPixelSize = aircraftMinimumPixelSize;
         entity.model.maximumScale = new Cesium.ConstantProperty(options.aircraftModelMaximumScale);
         entity.model.show = new Cesium.ConstantProperty(true);
       }
 
       if (entity.label) {
         entity.label.show = new Cesium.ConstantProperty(!options.miniMode);
-        entity.label.fillColor = new Cesium.ConstantProperty(Cesium.Color.WHITE);
-        entity.label.outlineColor = new Cesium.ConstantProperty(Cesium.Color.BLACK);
-        entity.label.outlineWidth = new Cesium.ConstantProperty(3);
-        entity.label.font = new Cesium.ConstantProperty("16px Segoe UI");
+        entity.label.fillColor = new Cesium.ConstantProperty(AIRCRAFT_LABEL_COLOR);
+        entity.label.outlineColor = new Cesium.ConstantProperty(Cesium.Color.TRANSPARENT);
+        entity.label.outlineWidth = new Cesium.ConstantProperty(0);
+        entity.label.style = new Cesium.ConstantProperty(Cesium.LabelStyle.FILL);
+        entity.label.font = new Cesium.ConstantProperty("600 17px Segoe UI");
+        entity.label.pixelOffset = new Cesium.ConstantProperty(new Cesium.Cartesian2(0, -48));
+        entity.label.showBackground = new Cesium.ConstantProperty(false);
         entity.label.scaleByDistance = new Cesium.ConstantProperty(new Cesium.NearFarScalar(1.2e6, 1.2, 8e6, 0.6));
       }
     }
@@ -386,11 +435,13 @@ function styleEntities(dataSource, bundle, options) {
 
       if (entity.label) {
         entity.label.show = new Cesium.ConstantProperty(!options.miniMode);
-        entity.label.fillColor = new Cesium.ConstantProperty(Cesium.Color.WHITE);
-        entity.label.outlineColor = new Cesium.ConstantProperty(Cesium.Color.BLACK);
-        entity.label.outlineWidth = new Cesium.ConstantProperty(3);
-        entity.label.font = new Cesium.ConstantProperty("18px Segoe UI");
-        entity.label.pixelOffset = new Cesium.ConstantProperty(new Cesium.Cartesian2(0, -38));
+        entity.label.fillColor = new Cesium.ConstantProperty(GROUND_STATION_LABEL_COLOR);
+        entity.label.outlineColor = new Cesium.ConstantProperty(Cesium.Color.TRANSPARENT);
+        entity.label.outlineWidth = new Cesium.ConstantProperty(0);
+        entity.label.style = new Cesium.ConstantProperty(Cesium.LabelStyle.FILL);
+        entity.label.font = new Cesium.ConstantProperty("700 18px Segoe UI");
+        entity.label.pixelOffset = new Cesium.ConstantProperty(new Cesium.Cartesian2(0, -44));
+        entity.label.showBackground = new Cesium.ConstantProperty(false);
         entity.label.scaleByDistance = new Cesium.ConstantProperty(new Cesium.NearFarScalar(1.2e6, 1.2, 9e6, 0.65));
       }
     }
@@ -2136,9 +2187,10 @@ export async function loadSatsimScenario({
   satelliteModelMinPixelSize = 15,
   satelliteModelMaximumScale = 120000,
   satelliteModelMaxViewDistance = 32000000,
-  aircraftModelScale = 30,
-  aircraftModelMinPixelSize = 50,
-  aircraftModelMaximumScale = 50000,
+  aircraftModelScale = DEFAULT_AIRCRAFT_MODEL_SCALE,
+  aircraftModelMinPixelSize = DEFAULT_AIRCRAFT_MODEL_MIN_PIXEL_SIZE,
+  aircraftModelNearPixelSize = DEFAULT_AIRCRAFT_MODEL_NEAR_PIXEL_SIZE,
+  aircraftModelMaximumScale = DEFAULT_AIRCRAFT_MODEL_MAXIMUM_SCALE,
   maxAircraft = 10,
   maxGroundStations = 1,
   showTopologyLinks = true,
@@ -2160,6 +2212,7 @@ export async function loadSatsimScenario({
   pruneInvisibleEntities(dataSource, bundle.visibleNodeIds);
   applyViewerClock(viewer, dataSource, bundle, playbackMultiplier);
   styleEntities(dataSource, bundle, {
+    viewer,
     miniMode,
     showLabels,
     showSatelliteModel,
@@ -2170,6 +2223,7 @@ export async function loadSatsimScenario({
     satelliteModelMaxViewDistance,
     aircraftModelScale,
     aircraftModelMinPixelSize,
+    aircraftModelNearPixelSize,
     aircraftModelMaximumScale,
     useSatellitePrimitives: true,
   });

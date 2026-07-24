@@ -61,6 +61,10 @@
       </div>
     </div>
     <div v-if="coverageWarning" class="coverage-warning" role="status">{{ coverageWarning }}</div>
+    <div v-if="SHOW_CAMERA_HEIGHT" class="camera-height-indicator" role="status">
+      <span>相机高度</span>
+      <strong>{{ cameraHeightText }}</strong>
+    </div>
 
     <aside v-if="aircraftRoutes.length > 0" class="aircraft-overview-panel" aria-label="飞机列表">
       <div class="aircraft-overview-heading">
@@ -206,6 +210,9 @@ const PLAYBACK_SPEED_OPTIONS = [1, 2, 5, 10];
 const DEFAULT_PLAYBACK_MULTIPLIER = 5;
 const EARTH_SIDEREAL_DAY_SEC = 86164;
 const SATELLITE_DOUBLE_CLICK_RADIUS_PX = 30;
+// 相机高度显示开关：true 为显示，false 为关闭。
+const SHOW_CAMERA_HEIGHT = true;
+const CAMERA_HEIGHT_UPDATE_INTERVAL_MS = 100;
 const SYNC_TICK_THROTTLE_MS = 60;                                     // 副屏同步时刻的节流间隔
 
 // ============= 组件状态 =============
@@ -230,6 +237,7 @@ const sceneLoadingText = ref("正在准备场景资源...");
 const sceneLoadError = ref("");
 const sceneEmpty = ref(false);
 const coverageWarning = ref("");
+const cameraHeightText = ref("--");
 const emptyScenarioText = "请先在场景配置库导入或生成场景。";
 const scenarioOptions = computed(() => {
   scenarioCatalogRefreshKey.value;
@@ -246,6 +254,7 @@ const selectedPlaybackSpeedLabel = computed(() => `${playbackMultiplier.value}×
 // ============= Cesium 相关 =============
 let viewer = null;                                                    // 主 3D 视图
 let removeAutoRotate = null;                                          // 地球自转销毁函数
+let removeCameraHeightDisplay = null;
 let removeImageryNetworkSync = null;
 let removeImageryFallback = null;
 let removeScreenSyncTick = null;                                      // 屏幕同步销毁函数
@@ -764,6 +773,7 @@ function createViewer() {
   viewer.scene.globe.maximumScreenSpaceError = 1.8;
 
   viewer.scene.backgroundColor = Cesium.Color.BLACK;
+  bindCameraHeightDisplay();
 
   void applyGlobeImageryLayers(viewer).then(() => {
     if (!viewer || viewer.isDestroyed()) {
@@ -778,6 +788,48 @@ function createViewer() {
     removeImageryNetworkSync = bindGlobeImageryNetworkSync(viewer);
     removeImageryFallback = bindAmapImageryFallback(viewer);
   });
+}
+
+function formatCameraHeight(heightMeters) {
+  if (!Number.isFinite(heightMeters)) {
+    return "--";
+  }
+  const safeHeightMeters = Math.max(0, heightMeters);
+  if (safeHeightMeters >= 1000) {
+    const heightKm = safeHeightMeters / 1000;
+    const fractionDigits = heightKm >= 10000 ? 0 : (heightKm >= 1000 ? 1 : 2);
+    return `${heightKm.toFixed(fractionDigits)} km`;
+  }
+  return `${safeHeightMeters.toFixed(0)} m`;
+}
+
+function bindCameraHeightDisplay() {
+  if (!SHOW_CAMERA_HEIGHT || !viewer || viewer.isDestroyed()) {
+    cameraHeightText.value = "--";
+    return;
+  }
+
+  let lastUpdateAtMs = Number.NEGATIVE_INFINITY;
+  const updateCameraHeight = () => {
+    const now = performance.now();
+    if (now - lastUpdateAtMs < CAMERA_HEIGHT_UPDATE_INTERVAL_MS) {
+      return;
+    }
+    lastUpdateAtMs = now;
+    const nextText = formatCameraHeight(viewer?.camera?.positionCartographic?.height);
+    if (nextText !== cameraHeightText.value) {
+      cameraHeightText.value = nextText;
+    }
+  };
+
+  updateCameraHeight();
+  viewer.scene.postRender.addEventListener(updateCameraHeight);
+  removeCameraHeightDisplay = () => {
+    if (viewer && !viewer.isDestroyed()) {
+      viewer.scene.postRender.removeEventListener(updateCameraHeight);
+    }
+    removeCameraHeightDisplay = null;
+  };
 }
 
 
@@ -1111,6 +1163,7 @@ function cleanupScenarioHandles() {
  */
 function destroyAllScenes() {
   if (removeAutoRotate) removeAutoRotate();
+  if (removeCameraHeightDisplay) removeCameraHeightDisplay();
   if (removeImageryNetworkSync) {
     removeImageryNetworkSync();
     removeImageryNetworkSync = null;
@@ -1133,6 +1186,7 @@ function destroyAllScenes() {
 
   viewer = null;
   removeAutoRotate = null;
+  cameraHeightText.value = "--";
   lastRotateTime = null;
 }
 
@@ -1483,6 +1537,35 @@ onBeforeUnmount(() => {
   border-color: rgba(103, 232, 249, 0.7);
   background: rgba(20, 75, 112, 0.64);
   color: #fff;
+}
+
+.camera-height-indicator {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 20;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 10px 7px 9px;
+  border-left: 2px solid rgba(78, 169, 255, 0.88);
+  border-radius: 4px;
+  background: rgba(4, 16, 28, 0.72);
+  color: #9fb6c9;
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  user-select: none;
+  backdrop-filter: blur(4px);
+}
+
+.camera-height-indicator strong {
+  min-width: 72px;
+  color: #e7f5ff;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .playback-group {
