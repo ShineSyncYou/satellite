@@ -2,8 +2,10 @@ import { clearWizardDraft, loadWizardDraft, saveWizardDraft } from "./scenarioSt
 
 export const DEFAULT_GROUND_STATION_ALT_KM = 0.0;
 export const DEFAULT_AIRCRAFT_CRUISE_ALT_KM = 10.6;
+export const DEFAULT_AIRCRAFT_CRUISE_SPEED_KMH = 850;
 export const DEFAULT_AIRCRAFT_RATE_MBPS = 25.0;
 export const DEFAULT_ROUTE_SAMPLE_COUNT = 21;
+export const DEFAULT_MISSION_DURATION_MIN = 60;
 
 function defaultDraft() {
   return {
@@ -35,7 +37,7 @@ function defaultDraft() {
       alt_km: DEFAULT_GROUND_STATION_ALT_KM,
     },
     simulationParams: {
-      totalMissionDurationMin: 10,
+      totalMissionDurationMin: DEFAULT_MISSION_DURATION_MIN,
       simulationSpeedMultiplier: 5,
       timeStepSeconds: 30,
     },

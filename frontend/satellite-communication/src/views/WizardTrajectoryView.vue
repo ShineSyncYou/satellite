@@ -48,17 +48,21 @@
             <label class="v2-field">
               <span>起始机场</span>
               <select v-model="newStartAirportCode" name="startAirport">
-                <option v-for="airport in AIRPORT_OPTIONS" :key="airport.code" :value="airport.code">
-                  {{ formatAirportLabel(airport) }}
-                </option>
+                <optgroup v-for="group in AIRPORT_GROUPS" :key="group.label" :label="group.label">
+                  <option v-for="airport in group.airports" :key="airport.code" :value="airport.code">
+                    {{ formatAirportLabel(airport) }}
+                  </option>
+                </optgroup>
               </select>
             </label>
             <label class="v2-field">
               <span>终点机场</span>
               <select v-model="newEndAirportCode" name="endAirport">
-                <option v-for="airport in AIRPORT_OPTIONS" :key="airport.code" :value="airport.code">
-                  {{ formatAirportLabel(airport) }}
-                </option>
+                <optgroup v-for="group in AIRPORT_GROUPS" :key="group.label" :label="group.label">
+                  <option v-for="airport in group.airports" :key="airport.code" :value="airport.code">
+                    {{ formatAirportLabel(airport) }}
+                  </option>
+                </optgroup>
               </select>
             </label>
           </div>
@@ -98,7 +102,7 @@
               <strong>{{ durationMinutes }} 分钟</strong>
             </div>
           </div>
-          <p>航线进度表示仿真开始时飞机所在的位置，后续会继续向终点机场飞行。</p>
+          <p>飞机以固定 850 km/h 沿大圆航线飞行；抵达终点后保持巡航高度并继续通信。</p>
         </div>
       </div>
 
@@ -187,7 +191,7 @@
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import ProductScaffold from "../components/layout/ProductScaffold.vue";
-import { AIRPORT_OPTIONS, formatAirportLabel, getAirportByCode } from "../lib/airportCatalog";
+import { AIRPORT_GROUPS, formatAirportLabel, getAirportByCode } from "../lib/airportCatalog";
 import {
   buildAircraftRouteFromAirports,
   buildTrafficDemands,
@@ -197,6 +201,7 @@ import {
 import {
   DEFAULT_AIRCRAFT_CRUISE_ALT_KM,
   DEFAULT_AIRCRAFT_RATE_MBPS,
+  DEFAULT_MISSION_DURATION_MIN,
   DEFAULT_ROUTE_SAMPLE_COUNT,
   getWizardDraft,
   updateWizardDraft,
@@ -211,7 +216,7 @@ const routeNotes = ref(draft.trajectoryConfig?.routeNotes || "");
 const routeSampleCount = Number(draft.trajectoryConfig?.routeSampleCount || DEFAULT_ROUTE_SAMPLE_COUNT);
 const routes = ref(Array.isArray(draft.aircraftRoutes) ? [...draft.aircraftRoutes] : []);
 const errorText = ref("");
-const durationMinutes = Number(draft.simulationParams?.totalMissionDurationMin || 10);
+const durationMinutes = Number(draft.simulationParams?.totalMissionDurationMin || DEFAULT_MISSION_DURATION_MIN);
 const durationSeconds = durationMinutes * 60;
 
 const newRouteId = ref("");

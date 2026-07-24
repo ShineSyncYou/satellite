@@ -2,8 +2,10 @@ import * as Cesium from "cesium";
 
 import {
   DEFAULT_AIRCRAFT_CRUISE_ALT_KM,
+  DEFAULT_AIRCRAFT_CRUISE_SPEED_KMH,
   DEFAULT_AIRCRAFT_RATE_MBPS,
   DEFAULT_GROUND_STATION_ALT_KM,
+  DEFAULT_MISSION_DURATION_MIN,
   DEFAULT_ROUTE_SAMPLE_COUNT,
 } from "./wizardDraft";
 import { getAirportByCode } from "./airportCatalog";
@@ -196,6 +198,7 @@ export function buildAircraftRoutePoints({
   end,
   durationSeconds,
   cruiseAltKm = DEFAULT_AIRCRAFT_CRUISE_ALT_KM,
+  cruiseSpeedKmh = DEFAULT_AIRCRAFT_CRUISE_SPEED_KMH,
   sampleCount = DEFAULT_ROUTE_SAMPLE_COUNT,
   startProgressPercent = 0,
 }) {
@@ -205,19 +208,30 @@ export function buildAircraftRoutePoints({
   const safeSamples = Math.max(2, Number(sampleCount) || DEFAULT_ROUTE_SAMPLE_COUNT);
   const safeDuration = Math.max(60, Number(durationSeconds) || 600);
   const progressFraction = clamp(startProgressPercent, 0, 100) / 100;
-  const points = [];
+  const safeCruiseSpeedKmh = Math.max(1, Number(cruiseSpeedKmh) || DEFAULT_AIRCRAFT_CRUISE_SPEED_KMH);
+  const routeDistanceKm = geodesic.surfaceDistance / 1000;
+  const remainingDistanceKm = routeDistanceKm * (1 - progressFraction);
+  const arrivalTimeSeconds = Math.min(safeDuration, (remainingDistanceKm / safeCruiseSpeedKmh) * 3600);
+  const timeline = new Set();
 
   for (let index = 0; index < safeSamples; index += 1) {
-    const timelineFraction = safeSamples === 1 ? 0 : index / (safeSamples - 1);
-    const fraction = progressFraction + ((1 - progressFraction) * timelineFraction);
+    timeline.add(roundTo(safeDuration * (index / (safeSamples - 1)), 6));
+  }
+  timeline.add(roundTo(arrivalTimeSeconds, 6));
+
+  const points = [...timeline].sort((left, right) => left - right).map((timeS) => {
+    const travelledFraction = routeDistanceKm > 0
+      ? Math.min(1 - progressFraction, ((safeCruiseSpeedKmh / 3600) * timeS) / routeDistanceKm)
+      : 1 - progressFraction;
+    const fraction = Math.min(1, progressFraction + travelledFraction);
     const cartographic = geodesic.interpolateUsingFraction(fraction);
-    points.push({
-      time_s: roundTo(safeDuration * timelineFraction, 6),
+    return {
+      time_s: timeS,
       lat: roundTo(Cesium.Math.toDegrees(cartographic.latitude), 6),
       lon: normalizeLongitude(Cesium.Math.toDegrees(cartographic.longitude)),
       alt: roundTo(cruiseAltKm, 3),
-    });
-  }
+    };
+  });
 
   if (points.length > 0) {
     points[0].time_s = 0;
@@ -236,6 +250,7 @@ export function makeAircraftRoute({
   startProgressPercent = 0,
   durationSeconds,
   cruiseAltKm = DEFAULT_AIRCRAFT_CRUISE_ALT_KM,
+  cruiseSpeedKmh = DEFAULT_AIRCRAFT_CRUISE_SPEED_KMH,
   sampleCount = DEFAULT_ROUTE_SAMPLE_COUNT,
   rateMbps = DEFAULT_AIRCRAFT_RATE_MBPS,
 }) {
@@ -245,6 +260,7 @@ export function makeAircraftRoute({
     end,
     durationSeconds,
     cruiseAltKm,
+    cruiseSpeedKmh,
     sampleCount,
     startProgressPercent,
   });
@@ -268,6 +284,7 @@ export function makeAircraftRoute({
     endAirportCode,
     startProgressPercent: roundTo(clamp(startProgressPercent, 0, 100), 3),
     cruiseAltKm: roundTo(cruiseAltKm, 3),
+    cruiseSpeedKmh: roundTo(cruiseSpeedKmh, 3),
     rateMbps: roundTo(rateMbps, 3),
     points,
   };
@@ -280,6 +297,7 @@ export function buildAircraftRouteFromAirports({
   startProgressPercent = 0,
   durationSeconds,
   cruiseAltKm = DEFAULT_AIRCRAFT_CRUISE_ALT_KM,
+  cruiseSpeedKmh = DEFAULT_AIRCRAFT_CRUISE_SPEED_KMH,
   sampleCount = DEFAULT_ROUTE_SAMPLE_COUNT,
   rateMbps = DEFAULT_AIRCRAFT_RATE_MBPS,
 }) {
@@ -297,6 +315,7 @@ export function buildAircraftRouteFromAirports({
     startProgressPercent,
     durationSeconds,
     cruiseAltKm,
+    cruiseSpeedKmh,
     sampleCount,
     rateMbps,
   });
@@ -308,6 +327,7 @@ export function rebuildRouteWithAltitude(route, durationSeconds, sampleCount = D
     end: route.end,
     durationSeconds,
     cruiseAltKm: route.cruiseAltKm,
+    cruiseSpeedKmh: route.cruiseSpeedKmh ?? DEFAULT_AIRCRAFT_CRUISE_SPEED_KMH,
     sampleCount,
     startProgressPercent: route.startProgressPercent || 0,
   });
@@ -342,6 +362,7 @@ export function rebuildRoutesForManifest({
       end: route.end,
       durationSeconds,
       cruiseAltKm: route.cruiseAltKm ?? DEFAULT_AIRCRAFT_CRUISE_ALT_KM,
+      cruiseSpeedKmh: route.cruiseSpeedKmh ?? DEFAULT_AIRCRAFT_CRUISE_SPEED_KMH,
       sampleCount,
       startProgressPercent: route.startProgressPercent || 0,
     });
@@ -381,7 +402,7 @@ function buildGroundStationPreview(groundStation) {
 }
 
 export function buildSampleConfigPreview(draft) {
-  const totalMissionDurationMin = Number(draft.simulationParams?.totalMissionDurationMin || 10);
+  const totalMissionDurationMin = Number(draft.simulationParams?.totalMissionDurationMin || DEFAULT_MISSION_DURATION_MIN);
   const durationSeconds = totalMissionDurationMin * 60;
   const timeStepSeconds = Number(draft.simulationParams?.timeStepSeconds || 30);
   const weatherMeta = getWeatherPresetMeta(draft.environmentParams?.weatherPreset);
@@ -414,7 +435,7 @@ export function buildSampleConfigPreview(draft) {
 
 export function buildWizardManifest(draft) {
   const weatherMeta = getWeatherPresetMeta(draft.environmentParams?.weatherPreset);
-  const totalMissionDurationMin = Number(draft.simulationParams?.totalMissionDurationMin || 10);
+  const totalMissionDurationMin = Number(draft.simulationParams?.totalMissionDurationMin || DEFAULT_MISSION_DURATION_MIN);
   const durationSeconds = totalMissionDurationMin * 60;
   const aircraftRoutes = rebuildRoutesForManifest({
     aircraftRoutes: draft.aircraftRoutes || [],
@@ -429,6 +450,7 @@ export function buildWizardManifest(draft) {
     endAirportCode: route.endAirportCode || "",
     startProgressPercent: roundTo(route.startProgressPercent || 0, 3),
     cruiseAltKm: roundTo(route.cruiseAltKm ?? DEFAULT_AIRCRAFT_CRUISE_ALT_KM, 3),
+    cruiseSpeedKmh: roundTo(route.cruiseSpeedKmh ?? DEFAULT_AIRCRAFT_CRUISE_SPEED_KMH, 3),
     rateMbps: roundTo(route.rateMbps ?? DEFAULT_AIRCRAFT_RATE_MBPS, 3),
     points: route.points || [],
   }));
@@ -450,7 +472,7 @@ export function buildWizardManifest(draft) {
     aircraftRoutes,
     trafficDemands,
     simulationParams: {
-      totalMissionDurationMin: Number(draft.simulationParams?.totalMissionDurationMin || 10),
+      totalMissionDurationMin: Number(draft.simulationParams?.totalMissionDurationMin || DEFAULT_MISSION_DURATION_MIN),
       simulationSpeedMultiplier: Number(draft.simulationParams?.simulationSpeedMultiplier || 5),
       timeStepSeconds: Number(draft.simulationParams?.timeStepSeconds || 30),
     },

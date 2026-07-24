@@ -19,6 +19,7 @@ function normalizeServerScenarioRecord(record) {
     sourceName: record.sourceName || record.title || record.id,
     artifacts: record.artifacts || null,
     error: record.error || "",
+    aircraftRoutes: Array.isArray(record.aircraftRoutes) ? record.aircraftRoutes : [],
   };
 }
 

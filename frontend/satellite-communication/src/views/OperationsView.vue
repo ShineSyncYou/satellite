@@ -62,6 +62,26 @@
     </div>
     <div v-if="coverageWarning" class="coverage-warning" role="status">{{ coverageWarning }}</div>
 
+    <aside v-if="aircraftRoutes.length > 0" class="aircraft-overview-panel" aria-label="飞机列表">
+      <div class="aircraft-overview-heading">
+        <span>当前飞机</span>
+        <strong>{{ aircraftRoutes.length }} 架</strong>
+      </div>
+      <div class="aircraft-overview-list">
+        <button
+          v-for="aircraftRoute in aircraftRoutes"
+          :key="aircraftRoute.id"
+          type="button"
+          class="aircraft-overview-item"
+          :class="{ active: focusedAircraftId === aircraftRoute.id }"
+          @click="focusAircraft(aircraftRoute.id)"
+        >
+          <span>{{ aircraftRoute.id }}</span>
+          <span>{{ aircraftRoute.airportPair }}</span>
+        </button>
+      </div>
+    </aside>
+
     <aside v-if="selectedEntityInfo" class="entity-info-panel">
       <div class="entity-info-header">
         <div>
@@ -168,6 +188,8 @@ import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import loadSatsimScenario from "../lib/loadSatsimScenario";
 import { getScenarioRecordSync, listRunnableScenarioRecords, listScenarioOptions, refreshServerScenarioRecords, resolveScenarioRuntime } from "../lib/runtimeScenarioCatalog";
+import { fetchServerScenario } from "../lib/simulationAdapter";
+import { getAirportByCode } from "../lib/airportCatalog";
 import { createScreenSyncChannel, postScreenSyncMessage, SCREEN_SYNC_MESSAGE_TYPES } from "../lib/screenSync";
 import {
   applyGlobeImageryLayers,
@@ -195,6 +217,8 @@ const playbackMultiplier = ref(DEFAULT_PLAYBACK_MULTIPLIER);
 const playbackPaused = ref(false);
 const selectedEntityInfo = ref(null);                                 // 左侧实体详情面板
 const selectedEntityId = ref("");                                     // 当前选中实体 ID
+const aircraftRoutes = ref([]);
+const focusedAircraftId = ref("");
 const modelViewerReady = ref(typeof window !== "undefined" && Boolean(window.customElements?.get("model-viewer")));
 const modelPreviewError = ref(false);
 const isScenarioMenuOpen = ref(false);
@@ -1003,6 +1027,41 @@ function flyToChina() {
   });
 }
 
+function focusAircraft(aircraftId) {
+  if (!viewer || viewer.isDestroyed() || !mainScenarioHandle) {
+    return;
+  }
+  const entity = mainScenarioHandle.entityLookup.get(aircraftId);
+  const position = entity?.position?.getValue(viewer.clock.currentTime);
+  if (!position) {
+    return;
+  }
+
+  focusedAircraftId.value = aircraftId;
+  viewer.trackedEntity = undefined;
+  const cartographic = Cesium.Cartographic.fromCartesian(position);
+  const currentHeight = Number(viewer.camera.positionCartographic?.height) || 6300000;
+  viewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromRadians(
+      cartographic.longitude,
+      cartographic.latitude,
+      currentHeight,
+    ),
+    orientation: {
+      heading: viewer.camera.heading,
+      pitch: Cesium.Math.toRadians(-90),
+      roll: 0,
+    },
+    duration: 1,
+  });
+}
+
+function formatAirportCodeWithCountry(code) {
+  const normalizedCode = String(code || "").toUpperCase();
+  const country = getAirportByCode(normalizedCode)?.country;
+  return country ? `${normalizedCode}（${country}）` : (normalizedCode || "--");
+}
+
 
 /**
  * 设置初始俯视图
@@ -1066,6 +1125,8 @@ function destroyAllScenes() {
   latestActiveTopology = new Map();
   latestActiveRoutes = new Map();
   latestRelativeTimeS = 0;
+  aircraftRoutes.value = [];
+  focusedAircraftId.value = "";
   clearSelectedEntity();
 
   if (viewer && !viewer.isDestroyed()) viewer.destroy();
@@ -1130,6 +1191,20 @@ async function initializeMainScene() {
         refreshSelectedEntityInfo();
       }
     },
+  });
+  const visibleAircraftIds = [...mainScenarioHandle.bundle.visibleNodeIds]
+    .filter((nodeId) => mainScenarioHandle.bundle.nodeTypeMap.get(nodeId) === "aircraft")
+    .sort((left, right) => left.localeCompare(right));
+  const scenarioDetail = await fetchServerScenario(selectedScenario.value).catch(() => null);
+  const routeById = new Map((scenarioDetail?.aircraftRoutes || []).map((route) => [route.id, route]));
+  aircraftRoutes.value = visibleAircraftIds.map((id) => {
+    const route = routeById.get(id);
+    const startAirportCode = route?.startAirportCode || "--";
+    const endAirportCode = route?.endAirportCode || "--";
+    return {
+      id,
+      airportPair: `${formatAirportCodeWithCountry(startAirportCode)} → ${formatAirportCodeWithCountry(endAirportCode)}`,
+    };
   });
   coverageWarning.value = mainScenarioHandle.coverageWarning;
 
@@ -1339,6 +1414,75 @@ onBeforeUnmount(() => {
   color: #fef3c7;
   font-size: 12px;
   line-height: 1.45;
+}
+
+.aircraft-overview-panel {
+  position: absolute;
+  top: 72px;
+  right: 12px;
+  z-index: 20;
+  width: min(260px, calc(100vw - 24px));
+  padding: 10px;
+  border: 1px solid rgba(125, 211, 252, 0.42);
+  border-radius: 10px;
+  background: rgba(7, 22, 40, 0.62);
+  box-shadow: 0 10px 24px rgba(2, 8, 18, 0.34);
+  backdrop-filter: blur(7px);
+}
+
+.aircraft-overview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #dbeafe;
+  font-size: 13px;
+}
+
+.aircraft-overview-heading strong {
+  color: #7dd3fc;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.aircraft-overview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: min(300px, calc(100vh - 142px));
+  margin-top: 8px;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(125, 211, 252, 0.46) transparent;
+}
+
+.aircraft-overview-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  border-radius: 7px;
+  background: rgba(10, 33, 59, 0.46);
+  color: #e0f2fe;
+  padding: 7px 8px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
+}
+
+.aircraft-overview-item span:last-child {
+  color: rgba(186, 230, 253, 0.72);
+  font-size: 11px;
+}
+
+.aircraft-overview-item:hover,
+.aircraft-overview-item.active {
+  border-color: rgba(103, 232, 249, 0.7);
+  background: rgba(20, 75, 112, 0.64);
+  color: #fff;
 }
 
 .playback-group {
@@ -1656,6 +1800,11 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 900px) {
+  .aircraft-overview-panel {
+    top: 112px;
+    max-width: min(240px, calc(100vw - 24px));
+  }
+
   .entity-info-panel {
     top: 110px;
     max-height: calc(100vh - 130px);

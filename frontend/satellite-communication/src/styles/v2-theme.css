@@ -27,13 +27,13 @@ body,
   color: var(--v2-text);
 }
 
-html,
-body {
+html {
   overflow-x: hidden;
   overflow-y: auto;
 }
 
 body {
+  overflow: visible;
   background:
     radial-gradient(circle at 18% 18%, rgba(36, 179, 255, 0.12), transparent 28%),
     radial-gradient(circle at 82% 12%, rgba(36, 179, 255, 0.08), transparent 24%),

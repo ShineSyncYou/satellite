@@ -715,6 +715,21 @@ function makePublicScenarioRecord(record) {
   return normalizeScenarioRecord(record);
 }
 
+async function getScenarioAircraftRoutes(record) {
+  if (!record?.backendTaskId) {
+    return [];
+  }
+  const task = await getTask(record.backendTaskId);
+  if (!Array.isArray(task?.manifest?.aircraftRoutes)) {
+    return [];
+  }
+  return task.manifest.aircraftRoutes.map((route) => ({
+    id: String(route.id || ""),
+    startAirportCode: String(route.startAirportCode || ""),
+    endAirportCode: String(route.endAirportCode || ""),
+  })).filter((route) => route.id);
+}
+
 async function handleListScenarios(res) {
   const records = await listScenarioRecords();
   jsonResponse(res, 200, {
@@ -728,7 +743,10 @@ async function handleScenarioDetails(res, scenarioId) {
     notFound(res);
     return;
   }
-  jsonResponse(res, 200, makePublicScenarioRecord(record));
+  jsonResponse(res, 200, {
+    ...makePublicScenarioRecord(record),
+    aircraftRoutes: await getScenarioAircraftRoutes(record),
+  });
 }
 
 async function handleScenarioResult(res, scenarioId) {

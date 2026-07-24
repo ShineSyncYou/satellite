@@ -109,11 +109,11 @@ import ProductScaffold from "../components/layout/ProductScaffold.vue";
 import { submitSimulationManifest } from "../lib/simulationAdapter";
 import { saveGeneratedScenarioManifest } from "../lib/scenarioStore";
 import { buildWizardManifest, formatCoordinate, getWeatherPresetMeta } from "../lib/wizardScenarioBuilder";
-import { getWizardDraft, updateWizardDraft } from "../lib/wizardDraft";
+import { DEFAULT_MISSION_DURATION_MIN, getWizardDraft, updateWizardDraft } from "../lib/wizardDraft";
 
 const router = useRouter();
 const draft = getWizardDraft();
-const durationMin = ref(Number(draft.simulationParams?.totalMissionDurationMin || 10));
+const durationMin = ref(Number(draft.simulationParams?.totalMissionDurationMin || DEFAULT_MISSION_DURATION_MIN));
 const speedMultiplier = ref(Number(draft.simulationParams?.simulationSpeedMultiplier || 5));
 const timeStepSeconds = ref(Number(draft.simulationParams?.timeStepSeconds || 30));
 const satAntennaAngleDeg = ref(Number(draft.communicationParams?.satAntennaAngleDeg || 25));
