@@ -8,7 +8,6 @@
 !/satsim/
 !/satsim/**
 satsim/.venv/
-satsim/data/
 satsim/result_player/
 satsim/**/__pycache__/
 satsim/**/*.pyc
