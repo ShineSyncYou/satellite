@@ -5,7 +5,7 @@ export const DEFAULT_AIRCRAFT_CRUISE_ALT_KM = 10.6;
 export const DEFAULT_AIRCRAFT_CRUISE_SPEED_KMH = 850;
 export const DEFAULT_AIRCRAFT_RATE_MBPS = 25.0;
 export const DEFAULT_ROUTE_SAMPLE_COUNT = 21;
-export const DEFAULT_MISSION_DURATION_MIN = 60;
+export const DEFAULT_MISSION_DURATION_MIN = 10;
 
 function defaultDraft() {
   return {
