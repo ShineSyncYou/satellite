@@ -1,0 +1,185 @@
+{
+  "start_time": "2026-04-03T00:00:00Z",
+  "duration": 1200,
+  "time_step": 30,
+  "event_sampling_enabled": true,
+  "event_sampling_min_step": 5.0,
+  "tle_file": "walker_8x8_50deg_862km.tle",
+  "sat_mapping": {
+    "SIM_SAT_1_1": "sat_1_1",
+    "SIM_SAT_1_2": "sat_1_2",
+    "SIM_SAT_1_3": "sat_1_3",
+    "SIM_SAT_1_4": "sat_1_4",
+    "SIM_SAT_1_5": "sat_1_5",
+    "SIM_SAT_1_6": "sat_1_6",
+    "SIM_SAT_1_7": "sat_1_7",
+    "SIM_SAT_1_8": "sat_1_8",
+    "SIM_SAT_2_1": "sat_2_1",
+    "SIM_SAT_2_2": "sat_2_2",
+    "SIM_SAT_2_3": "sat_2_3",
+    "SIM_SAT_2_4": "sat_2_4",
+    "SIM_SAT_2_5": "sat_2_5",
+    "SIM_SAT_2_6": "sat_2_6",
+    "SIM_SAT_2_7": "sat_2_7",
+    "SIM_SAT_2_8": "sat_2_8",
+    "SIM_SAT_3_1": "sat_3_1",
+    "SIM_SAT_3_2": "sat_3_2",
+    "SIM_SAT_3_3": "sat_3_3",
+    "SIM_SAT_3_4": "sat_3_4",
+    "SIM_SAT_3_5": "sat_3_5",
+    "SIM_SAT_3_6": "sat_3_6",
+    "SIM_SAT_3_7": "sat_3_7",
+    "SIM_SAT_3_8": "sat_3_8",
+    "SIM_SAT_4_1": "sat_4_1",
+    "SIM_SAT_4_2": "sat_4_2",
+    "SIM_SAT_4_3": "sat_4_3",
+    "SIM_SAT_4_4": "sat_4_4",
+    "SIM_SAT_4_5": "sat_4_5",
+    "SIM_SAT_4_6": "sat_4_6",
+    "SIM_SAT_4_7": "sat_4_7",
+    "SIM_SAT_4_8": "sat_4_8",
+    "SIM_SAT_5_1": "sat_5_1",
+    "SIM_SAT_5_2": "sat_5_2",
+    "SIM_SAT_5_3": "sat_5_3",
+    "SIM_SAT_5_4": "sat_5_4",
+    "SIM_SAT_5_5": "sat_5_5",
+    "SIM_SAT_5_6": "sat_5_6",
+    "SIM_SAT_5_7": "sat_5_7",
+    "SIM_SAT_5_8": "sat_5_8",
+    "SIM_SAT_6_1": "sat_6_1",
+    "SIM_SAT_6_2": "sat_6_2",
+    "SIM_SAT_6_3": "sat_6_3",
+    "SIM_SAT_6_4": "sat_6_4",
+    "SIM_SAT_6_5": "sat_6_5",
+    "SIM_SAT_6_6": "sat_6_6",
+    "SIM_SAT_6_7": "sat_6_7",
+    "SIM_SAT_6_8": "sat_6_8",
+    "SIM_SAT_7_1": "sat_7_1",
+    "SIM_SAT_7_2": "sat_7_2",
+    "SIM_SAT_7_3": "sat_7_3",
+    "SIM_SAT_7_4": "sat_7_4",
+    "SIM_SAT_7_5": "sat_7_5",
+    "SIM_SAT_7_6": "sat_7_6",
+    "SIM_SAT_7_7": "sat_7_7",
+    "SIM_SAT_7_8": "sat_7_8",
+    "SIM_SAT_8_1": "sat_8_1",
+    "SIM_SAT_8_2": "sat_8_2",
+    "SIM_SAT_8_3": "sat_8_3",
+    "SIM_SAT_8_4": "sat_8_4",
+    "SIM_SAT_8_5": "sat_8_5",
+    "SIM_SAT_8_6": "sat_8_6",
+    "SIM_SAT_8_7": "sat_8_7",
+    "SIM_SAT_8_8": "sat_8_8"
+  },
+  "aircraft_traj": [
+    {
+      "id": "AC_1",
+      "points": [
+        {"time_s": 0, "lat": 31.0, "lon": 103.0, "alt": 10.5},
+        {"time_s": 600, "lat": 32.2, "lon": 106.8, "alt": 10.8},
+        {"time_s": 1200, "lat": 33.5, "lon": 111.0, "alt": 10.5}
+      ]
+    },
+    {
+      "id": "AC_2",
+      "points": [
+        {"time_s": 0, "lat": 28.0, "lon": 98.0, "alt": 10.2},
+        {"time_s": 600, "lat": 29.8, "lon": 102.0, "alt": 10.7},
+        {"time_s": 1200, "lat": 31.5, "lon": 106.0, "alt": 10.2}
+      ]
+    },
+    {
+      "id": "AC_3",
+      "points": [
+        {"time_s": 0, "lat": 35.0, "lon": 112.0, "alt": 11.0},
+        {"time_s": 600, "lat": 36.8, "lon": 116.0, "alt": 11.2},
+        {"time_s": 1200, "lat": 38.5, "lon": 120.0, "alt": 11.0}
+      ]
+    },
+    {
+      "id": "AC_4",
+      "points": [
+        {"time_s": 0, "lat": 22.0, "lon": 108.0, "alt": 10.0},
+        {"time_s": 600, "lat": 24.2, "lon": 111.0, "alt": 10.4},
+        {"time_s": 1200, "lat": 26.5, "lon": 114.0, "alt": 10.0}
+      ]
+    },
+    {
+      "id": "AC_5",
+      "points": [
+        {"time_s": 0, "lat": 40.0, "lon": 116.0, "alt": 10.8},
+        {"time_s": 600, "lat": 41.2, "lon": 119.0, "alt": 11.0},
+        {"time_s": 1200, "lat": 42.5, "lon": 122.0, "alt": 10.8}
+      ]
+    },
+    {
+      "id": "AC_6",
+      "points": [
+        {"time_s": 0, "lat": 18.5, "lon": 100.0, "alt": 10.4},
+        {"time_s": 600, "lat": 20.5, "lon": 104.0, "alt": 10.6},
+        {"time_s": 1200, "lat": 22.5, "lon": 108.0, "alt": 10.4}
+      ]
+    },
+    {
+      "id": "AC_7",
+      "points": [
+        {"time_s": 0, "lat": 26.0, "lon": 118.0, "alt": 10.3},
+        {"time_s": 600, "lat": 28.0, "lon": 122.0, "alt": 10.6},
+        {"time_s": 1200, "lat": 30.0, "lon": 126.0, "alt": 10.3}
+      ]
+    },
+    {
+      "id": "AC_8",
+      "points": [
+        {"time_s": 0, "lat": 33.0, "lon": 95.0, "alt": 10.7},
+        {"time_s": 600, "lat": 34.5, "lon": 99.0, "alt": 10.9},
+        {"time_s": 1200, "lat": 36.0, "lon": 103.0, "alt": 10.7}
+      ]
+    },
+    {
+      "id": "AC_9",
+      "points": [
+        {"time_s": 0, "lat": 42.0, "lon": 108.0, "alt": 10.1},
+        {"time_s": 600, "lat": 43.5, "lon": 112.0, "alt": 10.3},
+        {"time_s": 1200, "lat": 45.0, "lon": 116.0, "alt": 10.1}
+      ]
+    },
+    {
+      "id": "AC_10",
+      "points": [
+        {"time_s": 0, "lat": 30.0, "lon": 122.0, "alt": 10.6},
+        {"time_s": 600, "lat": 31.5, "lon": 126.0, "alt": 10.8},
+        {"time_s": 1200, "lat": 33.0, "lon": 130.0, "alt": 10.6}
+      ]
+    }
+  ],
+  "ground_stations": [
+    {
+      "id": "GS_1",
+      "lat": 39.9042,
+      "lon": 116.4074,
+      "alt": 0.05
+    }
+  ],
+  "sat_antenna_angle": 35.0,
+  "bw_gsl": 150.0,
+  "bw_isl": 500.0,
+  "isl_max_distance_km": 7000.0,
+  "isl_require_los": true,
+  "isl_cross_plane_high_latitude_limit_deg": 45.0,
+  "isl_block_seam_cross_plane": false,
+  "rain_fade_intensity": 0.15,
+  "packet_size_bits": 12000,
+  "traffic_demands": [
+    {"source": "AC_1", "target": "GS_1", "rate_mbps": 25.0},
+    {"source": "AC_2", "target": "GS_1", "rate_mbps": 20.0},
+    {"source": "AC_3", "target": "GS_1", "rate_mbps": 30.0},
+    {"source": "AC_4", "target": "GS_1", "rate_mbps": 18.0},
+    {"source": "AC_5", "target": "GS_1", "rate_mbps": 22.0},
+    {"source": "AC_6", "target": "GS_1", "rate_mbps": 16.0},
+    {"source": "AC_7", "target": "GS_1", "rate_mbps": 24.0},
+    {"source": "AC_8", "target": "GS_1", "rate_mbps": 19.0},
+    {"source": "AC_9", "target": "GS_1", "rate_mbps": 21.0},
+    {"source": "AC_10", "target": "GS_1", "rate_mbps": 17.0}
+  ]
+}

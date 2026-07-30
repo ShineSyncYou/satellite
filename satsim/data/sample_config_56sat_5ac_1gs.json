@@ -1,0 +1,128 @@
+{
+  "start_time": "2026-04-03T00:00:00Z",
+  "duration": 600,
+  "time_step": 60,
+  "tle_file": "walker_7x8_56_test.tle",
+  "sat_mapping": {
+    "WALKER-1-1": "sat_1_1",
+    "WALKER-1-2": "sat_1_2",
+    "WALKER-1-3": "sat_1_3",
+    "WALKER-1-4": "sat_1_4",
+    "WALKER-1-5": "sat_1_5",
+    "WALKER-1-6": "sat_1_6",
+    "WALKER-1-7": "sat_1_7",
+    "WALKER-1-8": "sat_1_8",
+    "WALKER-2-1": "sat_2_1",
+    "WALKER-2-2": "sat_2_2",
+    "WALKER-2-3": "sat_2_3",
+    "WALKER-2-4": "sat_2_4",
+    "WALKER-2-5": "sat_2_5",
+    "WALKER-2-6": "sat_2_6",
+    "WALKER-2-7": "sat_2_7",
+    "WALKER-2-8": "sat_2_8",
+    "WALKER-3-1": "sat_3_1",
+    "WALKER-3-2": "sat_3_2",
+    "WALKER-3-3": "sat_3_3",
+    "WALKER-3-4": "sat_3_4",
+    "WALKER-3-5": "sat_3_5",
+    "WALKER-3-6": "sat_3_6",
+    "WALKER-3-7": "sat_3_7",
+    "WALKER-3-8": "sat_3_8",
+    "WALKER-4-1": "sat_4_1",
+    "WALKER-4-2": "sat_4_2",
+    "WALKER-4-3": "sat_4_3",
+    "WALKER-4-4": "sat_4_4",
+    "WALKER-4-5": "sat_4_5",
+    "WALKER-4-6": "sat_4_6",
+    "WALKER-4-7": "sat_4_7",
+    "WALKER-4-8": "sat_4_8",
+    "WALKER-5-1": "sat_5_1",
+    "WALKER-5-2": "sat_5_2",
+    "WALKER-5-3": "sat_5_3",
+    "WALKER-5-4": "sat_5_4",
+    "WALKER-5-5": "sat_5_5",
+    "WALKER-5-6": "sat_5_6",
+    "WALKER-5-7": "sat_5_7",
+    "WALKER-5-8": "sat_5_8",
+    "WALKER-6-1": "sat_6_1",
+    "WALKER-6-2": "sat_6_2",
+    "WALKER-6-3": "sat_6_3",
+    "WALKER-6-4": "sat_6_4",
+    "WALKER-6-5": "sat_6_5",
+    "WALKER-6-6": "sat_6_6",
+    "WALKER-6-7": "sat_6_7",
+    "WALKER-6-8": "sat_6_8",
+    "WALKER-7-1": "sat_7_1",
+    "WALKER-7-2": "sat_7_2",
+    "WALKER-7-3": "sat_7_3",
+    "WALKER-7-4": "sat_7_4",
+    "WALKER-7-5": "sat_7_5",
+    "WALKER-7-6": "sat_7_6",
+    "WALKER-7-7": "sat_7_7",
+    "WALKER-7-8": "sat_7_8"
+  },
+  "aircraft_traj": [
+    {
+      "id": "AC_1",
+      "points": [
+        {"time_s": 0, "lat": 31.0, "lon": 103.0, "alt": 10.5},
+        {"time_s": 300, "lat": 32.0, "lon": 106.5, "alt": 10.8},
+        {"time_s": 600, "lat": 33.0, "lon": 110.0, "alt": 10.5}
+      ]
+    },
+    {
+      "id": "AC_2",
+      "points": [
+        {"time_s": 0, "lat": 28.0, "lon": 98.0, "alt": 10.2},
+        {"time_s": 300, "lat": 29.5, "lon": 101.5, "alt": 10.7},
+        {"time_s": 600, "lat": 31.0, "lon": 105.0, "alt": 10.2}
+      ]
+    },
+    {
+      "id": "AC_3",
+      "points": [
+        {"time_s": 0, "lat": 35.0, "lon": 112.0, "alt": 11.0},
+        {"time_s": 300, "lat": 36.5, "lon": 115.5, "alt": 11.2},
+        {"time_s": 600, "lat": 38.0, "lon": 119.0, "alt": 11.0}
+      ]
+    },
+    {
+      "id": "AC_4",
+      "points": [
+        {"time_s": 0, "lat": 22.0, "lon": 108.0, "alt": 10.0},
+        {"time_s": 300, "lat": 24.0, "lon": 110.5, "alt": 10.4},
+        {"time_s": 600, "lat": 26.0, "lon": 113.0, "alt": 10.0}
+      ]
+    },
+    {
+      "id": "AC_5",
+      "points": [
+        {"time_s": 0, "lat": 40.0, "lon": 116.0, "alt": 10.8},
+        {"time_s": 300, "lat": 41.0, "lon": 119.0, "alt": 11.0},
+        {"time_s": 600, "lat": 42.0, "lon": 122.0, "alt": 10.8}
+      ]
+    }
+  ],
+  "ground_stations": [
+    {
+      "id": "GS_1",
+      "lat": 39.9042,
+      "lon": 116.4074,
+      "alt": 0.05
+    }
+  ],
+  "sat_antenna_angle": 70.0,
+  "bw_gsl": 150.0,
+  "bw_isl": 500.0,
+  "isl_max_distance_km": 7000.0,
+  "isl_require_los": true,
+  "rain_fade_intensity": 0.15,
+  "packet_size_bits": 12000,
+  "traffic_demands": [
+    {"source": "AC_1", "target": "GS_1", "rate_mbps": 25.0},
+    {"source": "AC_2", "target": "GS_1", "rate_mbps": 20.0},
+    {"source": "AC_3", "target": "GS_1", "rate_mbps": 30.0},
+    {"source": "AC_4", "target": "GS_1", "rate_mbps": 18.0},
+    {"source": "AC_5", "target": "GS_1", "rate_mbps": 22.0}
+  ]
+}
