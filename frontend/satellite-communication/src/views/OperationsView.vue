@@ -547,7 +547,7 @@ function buildSelectedEntityInfo(entityId) {
     modelSrc: nodeType === "aircraft"
       ? "/pictures/Airplane.glb"
       : nodeType === "ground_station"
-      ? "/pictures/Telescope_2.gltf"
+      ? "/pictures/ground-station.glb"
       : "/pictures/tdrs.glb",
     longitudeText: location ? `${location.lonDeg.toFixed(4)}°` : "--",
     latitudeText: location ? `${location.latDeg.toFixed(4)}°` : "--",
@@ -1290,7 +1290,8 @@ async function initializeMainScene() {
     satelliteModelPoolEnabled: false,
     maxAircraft: 10,
     maxGroundStations: 1,
-    showTopologyLinks: true,
+    // 主屏只显示有效端到端路由，不再绘制与业务接入无关的全网 ISL 背景。
+    showTopologyLinks: false,
     playbackMultiplier: playbackMultiplier.value,
     onSimulationTick: ({ relativeTimeS, activeTopology, activeRoutes }) => {
       latestRelativeTimeS = Number(relativeTimeS) || 0;

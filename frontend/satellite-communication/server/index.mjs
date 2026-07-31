@@ -1,10 +1,16 @@
 import { spawn } from "node:child_process";
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
-import { createReadStream, existsSync, promises as fs } from "node:fs";
+import { createReadStream, createWriteStream, existsSync, promises as fs } from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import process from "node:process";
+import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
+import {
+  constants as zlibConstants,
+  createBrotliCompress,
+  createGzip,
+} from "node:zlib";
 import Database from "better-sqlite3";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -35,10 +41,30 @@ const ADMIN_PASSWORD = process.env.SATSIM_ADMIN_PASSWORD || "";
 const AUTH_SECRET = process.env.SATSIM_AUTH_SECRET || "";
 const AUTH_COOKIE_NAME = "satsim_admin";
 const AUTH_TOKEN_TTL_MS = 1000 * 60 * 60 * 12;
+const IMMUTABLE_ASSET_CACHE_CONTROL = "public, max-age=31536000, immutable";
+const SCENARIO_ASSET_NAMES = Object.freeze(["bundle.json", "render.czml"]);
+const COMPRESSION_VARIANTS = Object.freeze([
+  {
+    encoding: "br",
+    extension: ".br",
+    createStream: () => createBrotliCompress({
+      params: {
+        [zlibConstants.BROTLI_PARAM_QUALITY]: 5,
+      },
+    }),
+  },
+  {
+    encoding: "gzip",
+    extension: ".gz",
+    createStream: () => createGzip({ level: 6 }),
+  },
+]);
 const isWindows = process.platform === "win32";
 
 const tasks = new Map();
+const compressionJobs = new Map();
 let scenarioDb = null;
+let compressionQueue = Promise.resolve();
 
 function jsonResponse(res, statusCode, payload) {
   const body = JSON.stringify(payload);
@@ -119,6 +145,153 @@ async function fileExists(filePath) {
   } catch {
     return false;
   }
+}
+
+async function fileStatOrNull(filePath) {
+  try {
+    return await fs.stat(filePath);
+  } catch {
+    return null;
+  }
+}
+
+async function compressedVariantIsFresh(sourceStat, variantPath) {
+  const variantStat = await fileStatOrNull(variantPath);
+  if (!variantStat || variantStat.size <= 0 || variantStat.mtimeMs < sourceStat.mtimeMs) {
+    return null;
+  }
+  return variantStat;
+}
+
+async function writeCompressedVariant(sourcePath, sourceStat, variant) {
+  const targetPath = `${sourcePath}${variant.extension}`;
+  if (await compressedVariantIsFresh(sourceStat, targetPath)) return;
+
+  const temporaryPath = `${targetPath}.${randomUUID()}.tmp`;
+  try {
+    await pipeline(
+      createReadStream(sourcePath),
+      variant.createStream(),
+      createWriteStream(temporaryPath),
+    );
+    await fs.rename(temporaryPath, targetPath);
+  } finally {
+    await fs.rm(temporaryPath, { force: true }).catch(() => {});
+  }
+}
+
+async function compressScenarioAsset(sourcePath) {
+  const sourceStat = await fileStatOrNull(sourcePath);
+  if (!sourceStat?.isFile()) return;
+  for (const variant of COMPRESSION_VARIANTS) {
+    try {
+      await writeCompressedVariant(sourcePath, sourceStat, variant);
+    } catch (error) {
+      console.warn(
+        `[satsim-v2-server] failed to create ${variant.encoding} asset ${sourcePath}:`,
+        serializeError(error),
+      );
+    }
+  }
+}
+
+async function compressScenarioAssets(assetPaths) {
+  for (const assetPath of assetPaths) {
+    await compressScenarioAsset(assetPath);
+  }
+}
+
+function queueScenarioAssetCompression(sourcePath) {
+  if (compressionJobs.has(sourcePath)) return compressionJobs.get(sourcePath);
+  const job = compressionQueue
+    .catch(() => {})
+    .then(() => compressScenarioAsset(sourcePath))
+    .finally(() => {
+      compressionJobs.delete(sourcePath);
+    });
+  compressionQueue = job;
+  compressionJobs.set(sourcePath, job);
+  return job;
+}
+
+function parseAcceptEncoding(headerValue) {
+  const qualities = new Map();
+  for (const part of String(headerValue || "").split(",")) {
+    const [rawName, ...parameters] = part.trim().toLowerCase().split(";");
+    if (!rawName) continue;
+    let quality = 1;
+    for (const parameter of parameters) {
+      const [name, value] = parameter.trim().split("=");
+      if (name === "q") {
+        const parsed = Number(value);
+        quality = Number.isFinite(parsed) ? Math.min(1, Math.max(0, parsed)) : 0;
+      }
+    }
+    qualities.set(rawName, quality);
+  }
+  return qualities;
+}
+
+function encodingQuality(qualities, encoding) {
+  if (qualities.has(encoding)) return qualities.get(encoding);
+  if (qualities.has("*")) return qualities.get("*");
+  return encoding === "identity" ? 1 : 0;
+}
+
+function buildAssetEtag(sourceStat, encoding) {
+  return `"${sourceStat.size.toString(16)}-${Math.trunc(sourceStat.mtimeMs).toString(16)}-${encoding}"`;
+}
+
+function requestCacheMatches(req, etag, sourceStat) {
+  const ifNoneMatch = String(req.headers["if-none-match"] || "");
+  if (ifNoneMatch) {
+    return ifNoneMatch
+      .split(",")
+      .map((value) => value.trim())
+      .some((value) => value === "*" || value === etag || value === `W/${etag}`);
+  }
+
+  const ifModifiedSince = Date.parse(String(req.headers["if-modified-since"] || ""));
+  if (!Number.isFinite(ifModifiedSince)) return false;
+  return Math.floor(sourceStat.mtimeMs / 1000) * 1000 <= ifModifiedSince;
+}
+
+async function selectScenarioAssetVariant(req, sourcePath) {
+  const sourceStat = await fileStatOrNull(sourcePath);
+  if (!sourceStat?.isFile()) return null;
+
+  const qualities = parseAcceptEncoding(req.headers["accept-encoding"]);
+  const available = [];
+  for (const variant of COMPRESSION_VARIANTS) {
+    const variantPath = `${sourcePath}${variant.extension}`;
+    const variantStat = await compressedVariantIsFresh(sourceStat, variantPath);
+    if (variantStat) {
+      available.push({
+        encoding: variant.encoding,
+        filePath: variantPath,
+        stat: variantStat,
+        preference: variant.encoding === "br" ? 2 : 1,
+      });
+    } else {
+      void queueScenarioAssetCompression(sourcePath);
+    }
+  }
+  available.push({
+    encoding: "identity",
+    filePath: sourcePath,
+    stat: sourceStat,
+    preference: 0,
+  });
+
+  const selected = available
+    .map((candidate) => ({
+      ...candidate,
+      quality: encodingQuality(qualities, candidate.encoding),
+    }))
+    .filter((candidate) => candidate.quality > 0)
+    .sort((left, right) => (right.quality - left.quality) || (right.preference - left.preference))[0];
+
+  return selected ? { ...selected, sourceStat } : { unacceptable: true, sourceStat };
 }
 
 async function readRequestBody(req) {
@@ -607,6 +780,7 @@ async function executeSimulationTask(task) {
       ),
       "utf-8",
     );
+    await compressScenarioAssets([bundleJsonPath, renderCzmlPath]);
 
     await updateTask(task.taskId, {
       status: "ready",
@@ -769,7 +943,7 @@ async function handleScenarioResult(res, scenarioId) {
   }
 }
 
-async function handleScenarioAsset(res, scenarioId, assetName) {
+async function handleScenarioAsset(req, res, scenarioId, assetName) {
   const record = await getScenarioRecord(scenarioId);
   if (!record) {
     notFound(res);
@@ -779,22 +953,49 @@ async function handleScenarioAsset(res, scenarioId, assetName) {
     jsonResponse(res, 409, { error: "Scenario is not ready yet.", status: record.status });
     return;
   }
-  if (assetName !== "render.czml" && assetName !== "bundle.json") {
+  if (!SCENARIO_ASSET_NAMES.includes(assetName)) {
     notFound(res);
     return;
   }
 
   const filePath = scenarioAssetPath(scenarioId, assetName);
-  if (!(await fileExists(filePath))) {
+  const selected = await selectScenarioAssetVariant(req, filePath);
+  if (!selected) {
     notFound(res);
     return;
   }
+  if (selected.unacceptable) {
+    res.writeHead(406, {
+      "Cache-Control": "no-store",
+      "Content-Type": "application/json; charset=utf-8",
+      "Vary": "Accept-Encoding",
+    });
+    res.end(JSON.stringify({ error: "No acceptable content encoding is available." }));
+    return;
+  }
 
-  res.writeHead(200, {
+  const etag = buildAssetEtag(selected.sourceStat, selected.encoding);
+  const responseHeaders = {
     "Content-Type": "application/json; charset=utf-8",
-    "Cache-Control": "no-store",
-  });
-  createReadStream(filePath).pipe(res);
+    "Content-Length": selected.stat.size,
+    "Cache-Control": IMMUTABLE_ASSET_CACHE_CONTROL,
+    "ETag": etag,
+    "Last-Modified": selected.sourceStat.mtime.toUTCString(),
+    "Vary": "Accept-Encoding",
+  };
+  if (selected.encoding !== "identity") {
+    responseHeaders["Content-Encoding"] = selected.encoding;
+  }
+
+  if (requestCacheMatches(req, etag, selected.sourceStat)) {
+    delete responseHeaders["Content-Length"];
+    res.writeHead(304, responseHeaders);
+    res.end();
+    return;
+  }
+
+  res.writeHead(200, responseHeaders);
+  createReadStream(selected.filePath).pipe(res);
 }
 
 async function handleDeleteScenario(req, res, scenarioId) {
@@ -879,6 +1080,10 @@ async function handleImportScenario(req, res) {
     ),
     "utf-8",
   );
+  await compressScenarioAssets([
+    path.join(dir, "bundle.json"),
+    path.join(dir, "render.czml"),
+  ]);
 
   const record = await upsertScenarioRecord({
     id: scenarioId,
@@ -989,6 +1194,18 @@ async function seedScenarioDbIfEmpty() {
   }
 }
 
+async function backfillScenarioAssetCompression() {
+  const records = (await listScenarioRecords()).filter((record) => record.status === "ready");
+  for (const record of records) {
+    for (const assetName of SCENARIO_ASSET_NAMES) {
+      const assetPath = scenarioAssetPath(record.id, assetName);
+      if (await fileExists(assetPath)) {
+        await queueScenarioAssetCompression(assetPath);
+      }
+    }
+  }
+}
+
 async function bootstrap() {
   await ensureDir(TASK_ROOT);
   await seedScenarioDbIfEmpty();
@@ -1077,7 +1294,7 @@ async function bootstrap() {
         methodNotAllowed(res);
         return;
       }
-      await handleScenarioAsset(res, decodeURIComponent(scenarioAssetMatch[1]), scenarioAssetMatch[2]);
+      await handleScenarioAsset(req, res, decodeURIComponent(scenarioAssetMatch[1]), scenarioAssetMatch[2]);
       return;
     }
 
@@ -1123,6 +1340,9 @@ async function bootstrap() {
     console.log(`[satsim-v2-server] satsim root: ${SATSIM_ROOT}`);
     console.log(`[satsim-v2-server] python: ${resolvePythonExecutable()}`);
     console.log(`[satsim-v2-server] admin auth: ${authEnabled() ? "enabled" : "disabled"}`);
+    void backfillScenarioAssetCompression().catch((error) => {
+      console.warn("[satsim-v2-server] compression backfill failed:", serializeError(error));
+    });
   });
 }
 

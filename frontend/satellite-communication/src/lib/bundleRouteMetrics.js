@@ -11,6 +11,8 @@
  * 前端图表可直接消费的时间序列。
  */
 
+import { normalizeTerminalOnlyRoute } from "./routePathPolicy";
+
 const EPSILON = 1e-9;
 
 const bundleCache = new Map();
@@ -114,21 +116,22 @@ function applyTopologyEvent(currentLinks, event) {
  * 应用路由事件，更新当前路由状态
  * 记录路由的连接状态、跳数、带宽、延迟等指标
  */
-function applyRouteEvent(currentRoutes, event) {
+function applyRouteEvent(currentRoutes, event, nodeTypeMap) {
   if (String(event.event_kind || "delta") === "snapshot") {
     currentRoutes.clear();
   }
 
   for (const route of event.routes || []) {
-    const path = (route.path || []).map((nodeId) => String(nodeId));
-    const connected = typeof route.connected === "boolean" ? route.connected : path.length > 0;
+    const normalizedRoute = normalizeTerminalOnlyRoute(route, nodeTypeMap);
     const routeKey = routeIdentity(route);
     currentRoutes.set(routeKey, {
       source: String(route.source),
       target: String(route.target),
-      connected,
-      path,
-      hop_count: Math.max(0, Number.isFinite(route.hop_count) ? Number(route.hop_count) : (path.length - 1)),
+      connected: normalizedRoute.connected,
+      path: normalizedRoute.path,
+      hop_count: normalizedRoute.connected
+        ? Math.max(0, normalizedRoute.path.length - 1)
+        : 0,
       effective_bandwidth_mbps: toSafeNumber(route.effective_bandwidth_mbps, 0),
       latency_ms: toSafeNumber(route.latency_ms, -1),
       packet_loss_rate: toSafeNumber(route.packet_loss_rate, 1),
@@ -206,7 +209,7 @@ export function buildRouteMetricsFromBundle(bundle) {
       routeIndex < routeEvents.length
       && toSafeNumber(routeEvents[routeIndex].relative_time_s, 0) <= relativeTimeS + EPSILON
     ) {
-      applyRouteEvent(currentRoutes, routeEvents[routeIndex]);
+      applyRouteEvent(currentRoutes, routeEvents[routeIndex], nodeTypeMap);
       routeIndex += 1;
     }
 

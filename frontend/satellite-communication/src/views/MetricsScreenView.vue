@@ -26,19 +26,12 @@
             <header class="panel-header"><h2>地面站信息</h2><span>{{ groundStationInfo.id || "--" }}</span></header>
             <div class="ground-main">
               <div class="ground-art">
-                <model-viewer
+                <img
                   class="radar-model"
-                  src="/pictures/Telescope_2.gltf"
-                  loading="eager"
-                  interaction-prompt="none"
-                  camera-controls
-                  camera-orbit="18deg 68deg 135%"
-                  field-of-view="26deg"
-                  auto-rotate
-                  shadow-intensity="0.8"
-                  exposure="1.1"
-                  environment-image="neutral"
-                />
+                  src="/pictures/ground-station.webp"
+                  alt="地面站天线"
+                  decoding="async"
+                >
               </div>
               <div class="ground-metrics">
                 <p><span>位置</span><strong>{{ groundStationInfo.positionText }}</strong></p>
@@ -114,6 +107,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import loadSatsimScenario from "../lib/loadSatsimScenario";
 // 副屏图表直接消费 bundle.json，而不是从 CZML 里反向解析业务数据。
 import { loadSatsimBundleSource } from "../lib/bundleRouteMetrics";
+import { normalizeTerminalOnlyRoute } from "../lib/routePathPolicy";
 import { getScenarioRecordSync, listRunnableScenarioRecords, refreshServerScenarioRecords, resolveScenarioRuntime } from "../lib/runtimeScenarioCatalog";
 import {
   createScreenSyncChannel,
@@ -127,11 +121,10 @@ import {
 } from "../lib/offlineImagery.js";
 import { openMainScreenWindow } from "../lib/openScreenWindow";
 import "../Widgets/widgets.css";
-import "@google/model-viewer";
 
-const DASHBOARD_UPDATE_THROTTLE_MS = 120;
-const CHART_PUSH_MIN_INTERVAL_MS = 260;
-const CHART_MAX_POINTS = 4000;
+const DASHBOARD_UPDATE_THROTTLE_MS = 250;
+const CHART_PUSH_MIN_INTERVAL_MS = 500;
+const CHART_MAX_POINTS = 600;
 const AIRCRAFT_METRIC_OPTIONS = Object.freeze([
   { key: "bw", title: "有效带宽", color: "#7c6cff" },
   { key: "latency", title: "时延", color: "#22d3ee" },
@@ -145,6 +138,7 @@ const satelliteRows = ref([]);
 const aircraftRows = ref([]);
 const groundStationInfo = ref({ id: "", positionText: "--", bandwidthText: "--", lossText: "--", connectedAircraftCount: 0, lossRaw: null, bandwidthRaw: null, latitude: null, longitude: null });
 const currentScenarioRuntime = ref(null);
+let currentScenarioBundle = null;
 const weatherText = ref("--");
 
 let screenSyncChannel = null;
@@ -170,7 +164,7 @@ let backgroundViewer = null;
 let removeBackgroundRotate = null;
 const miniImageryCleanup = { networkSync: null, fallback: null };
 const backgroundImageryCleanup = { networkSync: null, fallback: null };
-const groundChartSeries = { time: [], loss: [], bw: [] };
+const groundChartSeries = { time: [], loss: [], bw: [], buckets: [] };
 const groundChartPinnedTimeByKey = new Map();
 const aircraftMiniChartHosts = new Map();
 const aircraftMiniCharts = new Map();
@@ -236,8 +230,9 @@ function applyRouteEvent(event) {
   // 维护当前时刻生效的业务路由集合。
   if (event.event_kind === "snapshot") sim.activeRoutes.clear();
   for (const route of event.routes || []) {
+    const normalizedRoute = normalizeTerminalOnlyRoute(route, nodeTypeById);
     sim.activeRoutes.set(`${route.source}|${route.target}`, {
-      source: String(route.source), target: String(route.target), connected: Boolean(route.connected), path: [...(route.path || [])].map((id) => String(id)),
+      source: String(route.source), target: String(route.target), connected: normalizedRoute.connected, path: normalizedRoute.path,
       hop_count: Number(route.hop_count), effective_bandwidth_mbps: Number(route.effective_bandwidth_mbps), latency_ms: Number(route.latency_ms),
       packet_loss_rate: Number(route.packet_loss_rate), ber: Number(route.ber),
     });
@@ -415,9 +410,9 @@ async function initMiniMap() {
     miniViewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(104.0, 35.0, 7600000), duration: 0 });
   }
   if (miniScenarioHandle) miniScenarioHandle.cleanup();
-  if (!currentScenarioRuntime.value) return;
+  if (!currentScenarioRuntime.value || !currentScenarioBundle) return;
   miniScenarioHandle = await loadSatsimScenario({
-    viewer: miniViewer, czmlSource: currentScenarioRuntime.value.czmlSource, bundleSource: currentScenarioRuntime.value.bundleSource, miniMode: true, showCoverage: false, showLabels: false, showSatelliteModel: false,
+    viewer: miniViewer, czmlSource: currentScenarioRuntime.value.czmlSource, bundleSource: currentScenarioBundle, miniMode: true, showCoverage: false, showLabels: false, showSatelliteModel: false,
     maxAircraft: 10, maxGroundStations: 1, showTopologyLinks: true, playbackMultiplier: 1,
   });
   syncMiniMapTime(true);
@@ -480,7 +475,13 @@ function restorePinnedGroundTooltip(metricKey) {
   const pinnedTime = groundChartPinnedTimeByKey.get(metricKey);
   if (!chart || !Number.isFinite(pinnedTime)) return;
 
-  const dataIndex = groundChartSeries.time.findIndex((time) => Math.abs(Number(time) - pinnedTime) < 1e-6);
+  let dataIndex = groundChartSeries.time.findIndex((time) => Math.abs(Number(time) - pinnedTime) < 1e-6);
+  if (dataIndex < 0) {
+    const pinnedBucket = chartBucketForTime(pinnedTime);
+    if (pinnedBucket != null) {
+      dataIndex = groundChartSeries.buckets.findIndex((bucket) => bucket === pinnedBucket);
+    }
+  }
   if (dataIndex < 0) {
     clearPinnedGroundTooltip(metricKey);
     return;
@@ -593,7 +594,7 @@ function renderGroundBandwidthChart() {
     groundBandwidthChart.setOption({
       xAxis: { max: Number(state.durationS || 0) },
       series: [{ id: "ground-bw", data }],
-    });
+    }, { lazyUpdate: true, silent: true });
   }
   restorePinnedGroundTooltip("bw");
 }
@@ -653,7 +654,7 @@ function renderGroundLossChart() {
     groundLossChart.setOption({
       xAxis: { max: Number(state.durationS || 0) },
       series: [{ id: "ground-loss", data }],
-    });
+    }, { lazyUpdate: true, silent: true });
   }
   restorePinnedGroundTooltip("loss");
 }
@@ -663,35 +664,75 @@ function renderGroundCharts() {
   renderGroundLossChart();
 }
 
+function clearChartSeriesData(series) {
+  series.time = [];
+  series.buckets = [];
+  for (const key of Object.keys(series)) {
+    if (key !== "time" && key !== "buckets" && Array.isArray(series[key])) {
+      series[key] = [];
+    }
+  }
+}
+
+function chartBucketForTime(relativeTimeS) {
+  const durationS = Number(state.durationS);
+  if (!Number.isFinite(durationS) || durationS <= 0) return null;
+  const bucketWidthS = durationS / Math.max(1, CHART_MAX_POINTS - 1);
+  return Math.min(
+    CHART_MAX_POINTS - 1,
+    Math.max(0, Math.floor(Number(relativeTimeS) / Math.max(bucketWidthS, Number.EPSILON))),
+  );
+}
+
+function upsertChartPoint(series, relativeTimeS, values) {
+  const timeS = Number(relativeTimeS);
+  if (!Number.isFinite(timeS)) return;
+  const lastTimeS = series.time[series.time.length - 1];
+  if (Number.isFinite(lastTimeS) && timeS + 1e-9 < lastTimeS) {
+    clearChartSeriesData(series);
+  }
+
+  if (series.time.length === 0 && timeS > 0) {
+    series.time.push(0);
+    series.buckets.push(0);
+    for (const key of Object.keys(values)) series[key].push(0);
+  }
+
+  const configuredBucket = chartBucketForTime(timeS);
+  const bucket = configuredBucket == null
+    ? (series.buckets[series.buckets.length - 1] ?? -1) + 1
+    : configuredBucket;
+  const lastIndex = series.time.length - 1;
+  const replaceLast = lastIndex >= 0 && series.buckets[lastIndex] === bucket;
+
+  if (replaceLast) {
+    series.time[lastIndex] = timeS;
+    for (const [key, value] of Object.entries(values)) series[key][lastIndex] = value;
+  } else {
+    series.time.push(timeS);
+    series.buckets.push(bucket);
+    for (const [key, value] of Object.entries(values)) series[key].push(value);
+  }
+
+  if (series.time.length > CHART_MAX_POINTS) {
+    series.time.shift();
+    series.buckets.shift();
+    for (const key of Object.keys(values)) series[key].shift();
+  }
+}
+
 function resetGroundCharts() {
   groundChartPinnedTimeByKey.clear();
-  groundChartSeries.time = [];
-  groundChartSeries.loss = [];
-  groundChartSeries.bw = [];
+  clearChartSeriesData(groundChartSeries);
   lastChartPushAtMs = Number.NEGATIVE_INFINITY;
   renderGroundCharts();
 }
 
 function pushGroundPoint(relativeTimeS, lossValue, bwValue) {
-  const now = nowMs();
-  if ((now - lastChartPushAtMs) < CHART_PUSH_MIN_INTERVAL_MS) return;
-  lastChartPushAtMs = now;
-
-  if (groundChartSeries.time.length > 0 && relativeTimeS + 1e-9 < groundChartSeries.time[groundChartSeries.time.length - 1]) resetGroundCharts();
-  if (groundChartSeries.time.length === 0 && relativeTimeS > 0) {
-    groundChartSeries.time.push(0);
-    groundChartSeries.loss.push(0);
-    groundChartSeries.bw.push(0);
-  }
-  groundChartSeries.time.push(relativeTimeS);
-  groundChartSeries.loss.push(Number.isFinite(lossValue) ? lossValue : null);
-  groundChartSeries.bw.push(Number.isFinite(bwValue) ? bwValue : null);
-  if (groundChartSeries.time.length > CHART_MAX_POINTS) {
-    groundChartSeries.time.shift();
-    groundChartSeries.loss.shift();
-    groundChartSeries.bw.shift();
-  }
-  renderGroundCharts();
+  upsertChartPoint(groundChartSeries, relativeTimeS, {
+    loss: Number.isFinite(lossValue) ? lossValue : null,
+    bw: Number.isFinite(bwValue) ? bwValue : null,
+  });
 }
 
 function rebuildGroundInfo(relativeTimeS) {
@@ -799,6 +840,7 @@ function ensureAircraftSeries(id) {
       latency: [],
       ber: [],
       hop: [],
+      buckets: [],
     });
   }
   return aircraftChartSeriesById.get(id);
@@ -863,7 +905,13 @@ function restorePinnedAircraftTooltip(chartKey) {
 
   const [id] = chartKey.split("::");
   const series = aircraftChartSeriesById.get(id);
-  const dataIndex = series?.time?.findIndex((time) => Math.abs(Number(time) - pinnedTime) < 1e-6) ?? -1;
+  let dataIndex = series?.time?.findIndex((time) => Math.abs(Number(time) - pinnedTime) < 1e-6) ?? -1;
+  if (dataIndex < 0) {
+    const pinnedBucket = chartBucketForTime(pinnedTime);
+    if (pinnedBucket != null) {
+      dataIndex = series?.buckets?.findIndex((bucket) => bucket === pinnedBucket) ?? -1;
+    }
+  }
   if (dataIndex < 0) {
     clearPinnedAircraftTooltip(chartKey);
     return;
@@ -1007,7 +1055,7 @@ function renderAircraftMiniChart(id, metricKey) {
       xAxis: { max: Number(state.durationS || 0) },
       yAxis: { min: yAxisMin, max: yAxisMax },
       series: [{ id: chartKey, data }],
-    });
+    }, { lazyUpdate: true, silent: true });
   }
   restorePinnedAircraftTooltip(chartKey);
 }
@@ -1022,53 +1070,28 @@ function resetAircraftCharts() {
 
 function pushAircraftPoint(id, relativeTimeS, route) {
   const series = ensureAircraftSeries(id);
-  if (series.time.length > 0 && relativeTimeS + 1e-9 < series.time[series.time.length - 1]) {
-    series.time = [];
-    series.bw = [];
-    series.latency = [];
-    series.ber = [];
-    series.hop = [];
-  }
-  if (series.time.length === 0 && relativeTimeS > 0) {
-    series.time.push(0);
-    series.bw.push(0);
-    series.latency.push(0);
-    series.ber.push(0);
-    series.hop.push(0);
-  }
-
-  series.time.push(relativeTimeS);
-  series.bw.push(route && Number.isFinite(Number(route.effective_bandwidth_mbps)) ? Number(route.effective_bandwidth_mbps) : 0);
-  series.latency.push(route && Number.isFinite(Number(route.latency_ms)) ? Number(route.latency_ms) : null);
-  series.ber.push(route && Number.isFinite(Number(route.ber)) ? Number(route.ber) : null);
-  series.hop.push(route && Number.isFinite(Number(route.hop_count)) ? Number(route.hop_count) : null);
-
-  if (series.time.length > CHART_MAX_POINTS) {
-    series.time.shift();
-    series.bw.shift();
-    series.latency.shift();
-    series.ber.shift();
-    series.hop.shift();
-  }
-  for (const metric of AIRCRAFT_METRIC_OPTIONS) {
-    renderAircraftMiniChart(id, metric.key);
-  }
+  upsertChartPoint(series, relativeTimeS, {
+    bw: route && Number.isFinite(Number(route.effective_bandwidth_mbps)) ? Number(route.effective_bandwidth_mbps) : 0,
+    latency: route && Number.isFinite(Number(route.latency_ms)) ? Number(route.latency_ms) : null,
+    ber: route && Number.isFinite(Number(route.ber)) ? Number(route.ber) : null,
+    hop: route && Number.isFinite(Number(route.hop_count)) ? Number(route.hop_count) : null,
+  });
 }
 
-function renderAllAircraftCharts() {
+function renderAllAircraftCharts({ resize = false } = {}) {
   for (const [chartKey, chart] of aircraftMiniCharts.entries()) {
     const [id, metricKey] = chartKey.split("::");
-    chart.resize();
+    if (resize) chart.resize();
     renderAircraftMiniChart(id, metricKey);
   }
 }
 
-function rebuildAircraftRows(relativeTimeS) {
+function rebuildAircraftRows(relativeTimeS, shouldSampleCharts) {
   const rows = allAircraftIds.map((id) => {
     const position = interpolateTrack(nodeTracksById.get(id), relativeTimeS);
     const route = routeForAircraft(id);
     const targetId = route?.target || groundStationId || "GS_1";
-    pushAircraftPoint(id, relativeTimeS, route);
+    if (shouldSampleCharts) pushAircraftPoint(id, relativeTimeS, route);
     return {
       id,
       connected: Boolean(route),
@@ -1087,13 +1110,19 @@ function refreshDashboard(force = false) {
   const now = nowMs();
   if (!force && (now - lastDashboardRenderAtMs) < DASHBOARD_UPDATE_THROTTLE_MS) return;
   lastDashboardRenderAtMs = now;
+  const shouldSampleCharts = force || (now - lastChartPushAtMs) >= CHART_PUSH_MIN_INTERVAL_MS;
+  if (shouldSampleCharts) lastChartPushAtMs = now;
 
   const relativeTimeS = normalizeRelativeTime(state.currentTimeS, state.durationS);
   advanceSimToTime(relativeTimeS);
   rebuildGroundInfo(relativeTimeS);
   rebuildSatelliteRows(relativeTimeS);
-  rebuildAircraftRows(relativeTimeS);
-  pushGroundPoint(relativeTimeS, Number(groundStationInfo.value.lossRaw), Number(groundStationInfo.value.bandwidthRaw));
+  rebuildAircraftRows(relativeTimeS, shouldSampleCharts);
+  if (shouldSampleCharts) {
+    pushGroundPoint(relativeTimeS, Number(groundStationInfo.value.lossRaw), Number(groundStationInfo.value.bandwidthRaw));
+    renderGroundCharts();
+    renderAllAircraftCharts();
+  }
   syncMiniMapTime();
 }
 
@@ -1146,6 +1175,12 @@ async function loadScenarioMetrics(scenarioKey) {
   const currentSequence = ++loadSequence;
   state.loading = true;
   state.error = "";
+  if (miniScenarioHandle) {
+    miniScenarioHandle.cleanup();
+    miniScenarioHandle = null;
+  }
+  currentScenarioRuntime.value = null;
+  currentScenarioBundle = null;
 
   try {
     const runtime = await resolveScenarioRuntime(scenarioKey);
@@ -1153,6 +1188,7 @@ async function loadScenarioMetrics(scenarioKey) {
     if (currentSequence !== loadSequence) return;
 
     currentScenarioRuntime.value = runtime;
+    currentScenarioBundle = bundle;
     extractScenarioData(bundle);
     state.scenarioKey = scenarioKey;
     // 先让三列布局渲染出来，再初始化左上角 Cesium 小地图容器。
@@ -1174,6 +1210,8 @@ async function loadScenarioMetrics(scenarioKey) {
   } catch (error) {
     if (currentSequence !== loadSequence) return;
     state.error = error instanceof Error ? error.message : String(error);
+    currentScenarioRuntime.value = null;
+    currentScenarioBundle = null;
     satelliteRows.value = [];
     aircraftRows.value = [];
     state.loading = false;
@@ -1255,7 +1293,7 @@ function resizeDashboard() {
   if (groundBandwidthChart) groundBandwidthChart.resize();
   if (groundLossChart) groundLossChart.resize();
   renderGroundCharts();
-  renderAllAircraftCharts();
+  renderAllAircraftCharts({ resize: true });
   if (miniViewer && !miniViewer.isDestroyed()) {
     miniViewer.resize();
     miniViewer.scene.requestRender();
@@ -1263,10 +1301,6 @@ function resizeDashboard() {
 }
 
 watch(() => state.currentTimeS, () => { refreshDashboard(); });
-watch(aircraftRows, async () => {
-  await nextTick();
-  renderAllAircraftCharts();
-});
 
 onMounted(async () => {
   initBackgroundGlobe();
@@ -1290,6 +1324,8 @@ onBeforeUnmount(() => {
     screenSyncChannel = null;
   }
   if (miniScenarioHandle) miniScenarioHandle.cleanup();
+  currentScenarioBundle = null;
+  currentScenarioRuntime.value = null;
   teardownViewerImagery(miniImageryCleanup);
   if (miniViewer && !miniViewer.isDestroyed()) miniViewer.destroy();
   if (groundBandwidthChart) {
@@ -1389,8 +1425,7 @@ onBeforeUnmount(() => {
 .ground-panel { flex: 1 1 50%; min-height: 320px; display: grid; grid-template-rows: auto auto minmax(0, 1fr); overflow: hidden; }
 .ground-main { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 8px; padding: 8px 10px 0; min-height: 0; overflow: hidden; align-content: start; }
 .ground-art { position: relative; min-height: 148px; border-radius: 10px; background: radial-gradient(circle at 50% 50%, rgba(66, 153, 225, 0.22), rgba(10, 27, 49, 0.18)); border: 1px solid rgba(107, 177, 234, 0.3); display: flex; justify-content: center; align-items: center; overflow: hidden; }
-.ground-art model-viewer { --poster-color: transparent; background: transparent; }
-.ground-art .radar-model { width: 128px; height: 128px; }
+.ground-art .radar-model { width: 128px; height: 128px; object-fit: contain; }
 .ground-metrics { display: flex; flex-direction: column; gap: 6px; }
 .ground-metrics p { margin: 0; display: flex; justify-content: space-between; gap: 10px; font-size: 12px; min-height: 18px; }
 .ground-metrics span { color: #93c5fd; }

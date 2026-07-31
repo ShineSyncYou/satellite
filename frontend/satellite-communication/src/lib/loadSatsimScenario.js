@@ -24,6 +24,7 @@
  */
 
 import * as Cesium from "cesium";
+import { normalizeTerminalOnlyRoute } from "./routePathPolicy";
 
 // ============= 颜色配置 =============
 const SATELLITE_UNIFIED_COLOR = Cesium.Color.fromCssColorString("#ffd75e");
@@ -738,17 +739,18 @@ function routeSegmentWidth(segmentOrType) {
   return 1.2;
 }
 
-function applyRouteEvent(activeRoutes, event) {
+function applyRouteEvent(activeRoutes, event, nodeTypeMap) {
   if (event.event_kind === "snapshot") {
     activeRoutes.clear();
   }
 
   for (const route of event.routes || []) {
+    const normalizedRoute = normalizeTerminalOnlyRoute(route, nodeTypeMap);
     activeRoutes.set(`${route.source}|${route.target}`, {
       source: route.source,
       target: route.target,
-      connected: Boolean(route.connected),
-      path: [...(route.path || [])],
+      connected: normalizedRoute.connected,
+      path: normalizedRoute.path,
       hop_count: Number(route.hop_count),
       effective_bandwidth_mbps: Number(route.effective_bandwidth_mbps),
       latency_ms: Number(route.latency_ms),
@@ -2131,7 +2133,11 @@ function advanceStateToTime(state, bundle, relativeTime, enableTopologyLinks) {
     state.routeIndex < bundle.routeEvents.length
     && Number(bundle.routeEvents[state.routeIndex].relative_time_s) <= relativeTime + 1e-9
   ) {
-    applyRouteEvent(state.activeRoutes, bundle.routeEvents[state.routeIndex]);
+    applyRouteEvent(
+      state.activeRoutes,
+      bundle.routeEvents[state.routeIndex],
+      bundle.nodeTypeMap,
+    );
     routeChanged = true;
     state.routeIndex += 1;
   }
@@ -2390,11 +2396,15 @@ export async function loadSatsimScenario({
     const coverageTimeRewound = relativeTime + 1e-9 < lastCoverageRelativeTime;
     updateSatellitePointPrimitives(satellitePrimitives.lookup, trackStore, relativeTime);
 
+    const renderTopologyLinks = showTopologyLinks && !miniMode;
+    const needsTopologyState = renderTopologyLinks
+      || (showCoverage && !miniMode)
+      || typeof onSimulationTick === "function";
     const { routeChanged, topologyChanged } = advanceStateToTime(
       incrementalState,
       bundle,
       relativeTime,
-      showTopologyLinks && !miniMode,
+      needsTopologyState,
     );
 
     if (routeChanged || topologyChanged || lastRouteSignature === "") {
@@ -2424,7 +2434,7 @@ export async function loadSatsimScenario({
     }
     updatePolylinePrimitivePositions(routePolylinePool, trackStore, entityLookup, time, relativeTime);
 
-    if ((showTopologyLinks && !miniMode) && (topologyChanged || incrementalState.lastRelativeTime < 1e-9)) {
+    if (renderTopologyLinks && (topologyChanged || incrementalState.lastRelativeTime < 1e-9)) {
       const topologyState = buildTopologySegments(incrementalState.activeTopology, bundle);
       if (topologyState.signature !== lastTopologySignature) {
         syncPolylinePrimitivePool(topologyPolylineCollection, topologyPolylinePool, topologyState.segments, {
