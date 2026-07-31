@@ -1,6 +1,5 @@
 ﻿<template>
   <div class="metrics-root">
-    <div id="metricsBgGlobe"></div>
     <header class="metrics-header">
       <div class="header-left">
         <h1>链路参数副屏</h1>
@@ -160,10 +159,7 @@ let miniViewer = null;
 let miniScenarioHandle = null;
 let groundBandwidthChart = null;
 let groundLossChart = null;
-let backgroundViewer = null;
-let removeBackgroundRotate = null;
 const miniImageryCleanup = { networkSync: null, fallback: null };
-const backgroundImageryCleanup = { networkSync: null, fallback: null };
 const groundChartSeries = { time: [], loss: [], bw: [], buckets: [] };
 const groundChartPinnedTimeByKey = new Map();
 const aircraftMiniChartHosts = new Map();
@@ -304,79 +300,6 @@ function setupViewerImagery(viewer, cleanup) {
     cleanup.networkSync = bindGlobeImageryNetworkSync(viewer);
     cleanup.fallback = bindAmapImageryFallback(viewer);
   });
-}
-
-/**
- * 副屏背景地球：仅用于氛围视觉，不参与业务数据渲染。
- */
-function initBackgroundGlobe() {
-  if (backgroundViewer && !backgroundViewer.isDestroyed()) return;
-  backgroundViewer = new Cesium.Viewer("metricsBgGlobe", {
-    animation: false,
-    baseLayerPicker: false,
-    fullscreenButton: false,
-    geocoder: false,
-    homeButton: false,
-    infoBox: false,
-    navigationHelpButton: false,
-    sceneModePicker: false,
-    selectionIndicator: false,
-    timeline: false,
-    shouldAnimate: true,
-    terrainProvider: new Cesium.EllipsoidTerrainProvider(),
-    imageryProvider: false,
-    skyBox: false,
-    skyAtmosphere: false,
-    sun: false,
-    moon: false,
-  });
-
-  backgroundViewer.cesiumWidget.creditContainer.style.display = "none";
-  backgroundViewer.scene.backgroundColor = Cesium.Color.TRANSPARENT;
-  backgroundViewer.scene.globe.enableLighting = false;
-  backgroundViewer.scene.fog.enabled = false;
-  backgroundViewer.scene.globe.showGroundAtmosphere = false;
-  backgroundViewer.scene.globe.baseColor = new Cesium.Color(0.08, 0.18, 0.34, 0.95);
-  setupViewerImagery(backgroundViewer, backgroundImageryCleanup);
-  backgroundViewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(104.0, 30.4, 18500000),
-    orientation: {
-      heading: 0,
-      pitch: Cesium.Math.toRadians(-88),
-      roll: 0,
-    },
-    duration: 0,
-  });
-
-  const earthRate = (2 * Math.PI) / (86164 / 4);
-  let lastTime = null;
-  const onTick = (clock) => {
-    if (!backgroundViewer || backgroundViewer.isDestroyed()) return;
-    if (!lastTime) {
-      lastTime = Cesium.JulianDate.clone(clock.currentTime);
-      return;
-    }
-    const deltaSeconds = Cesium.JulianDate.secondsDifference(clock.currentTime, lastTime);
-    Cesium.JulianDate.clone(clock.currentTime, lastTime);
-    backgroundViewer.scene.camera.rotate(
-      Cesium.Cartesian3.UNIT_Z,
-      -earthRate * clock.multiplier * deltaSeconds,
-    );
-  };
-  backgroundViewer.clock.onTick.addEventListener(onTick);
-  removeBackgroundRotate = () => backgroundViewer?.clock?.onTick?.removeEventListener(onTick);
-}
-
-function destroyBackgroundGlobe() {
-  if (removeBackgroundRotate) {
-    removeBackgroundRotate();
-    removeBackgroundRotate = null;
-  }
-  teardownViewerImagery(backgroundImageryCleanup);
-  if (backgroundViewer && !backgroundViewer.isDestroyed()) {
-    backgroundViewer.destroy();
-  }
-  backgroundViewer = null;
 }
 
 async function initMiniMap() {
@@ -1338,7 +1261,6 @@ function resizeDashboard() {
 watch(() => state.currentTimeS, () => { refreshDashboard(); });
 
 onMounted(async () => {
-  initBackgroundGlobe();
   await refreshServerScenarioRecords().catch(() => []);
   if (!getScenarioRecordSync(state.scenarioKey)) {
     state.scenarioKey = listRunnableScenarioRecords()[0]?.id || "";
@@ -1379,7 +1301,6 @@ onBeforeUnmount(() => {
   aircraftChartPinnedTimeByKey.clear();
   aircraftChartSeriesById.clear();
   aircraftChartRefHandlers.clear();
-  destroyBackgroundGlobe();
 });
 </script>
 <style scoped>
@@ -1392,19 +1313,12 @@ onBeforeUnmount(() => {
   height: 100%;
 }
 
-#metricsBgGlobe {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-}
-
 .metrics-root {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
-  background: transparent;
+  background: #06111f;
   color: #dce8f5;
   overflow: hidden;
 }
