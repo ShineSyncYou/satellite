@@ -1105,15 +1105,49 @@ function rebuildAircraftRows(relativeTimeS, shouldSampleCharts) {
   aircraftRows.value = rows;
 }
 
+function sampleChartHistoryAt(relativeTimeS) {
+  advanceSimToTime(relativeTimeS);
+  rebuildGroundInfo(relativeTimeS);
+  for (const id of allAircraftIds) {
+    pushAircraftPoint(id, relativeTimeS, routeForAircraft(id));
+  }
+  pushGroundPoint(
+    relativeTimeS,
+    Number(groundStationInfo.value.lossRaw),
+    Number(groundStationInfo.value.bandwidthRaw),
+  );
+}
+
+function backfillChartHistory(relativeTimeS) {
+  const targetTimeS = Number(relativeTimeS);
+  if (!Number.isFinite(targetTimeS)) return;
+
+  const lastTimeS = groundChartSeries.time[groundChartSeries.time.length - 1];
+  if (Number.isFinite(lastTimeS) && targetTimeS + 1e-9 < lastTimeS) {
+    resetSimState();
+    resetGroundCharts();
+    resetAircraftCharts();
+  }
+
+  const targetBucket = chartBucketForTime(targetTimeS);
+  if (targetBucket == null) return;
+
+  const lastBucket = groundChartSeries.buckets[groundChartSeries.buckets.length - 1] ?? -1;
+  const bucketWidthS = Number(state.durationS) / Math.max(1, CHART_MAX_POINTS - 1);
+  for (let bucket = lastBucket + 1; bucket < targetBucket; bucket += 1) {
+    sampleChartHistoryAt(bucket * bucketWidthS);
+  }
+}
+
 function refreshDashboard(force = false) {
   // 按节流频率刷新三列数据，避免每帧重算过重。
   const now = nowMs();
   if (!force && (now - lastDashboardRenderAtMs) < DASHBOARD_UPDATE_THROTTLE_MS) return;
   lastDashboardRenderAtMs = now;
   const shouldSampleCharts = force || (now - lastChartPushAtMs) >= CHART_PUSH_MIN_INTERVAL_MS;
-  if (shouldSampleCharts) lastChartPushAtMs = now;
 
   const relativeTimeS = normalizeRelativeTime(state.currentTimeS, state.durationS);
+  if (shouldSampleCharts) backfillChartHistory(relativeTimeS);
   advanceSimToTime(relativeTimeS);
   rebuildGroundInfo(relativeTimeS);
   rebuildSatelliteRows(relativeTimeS);
@@ -1122,6 +1156,7 @@ function refreshDashboard(force = false) {
     pushGroundPoint(relativeTimeS, Number(groundStationInfo.value.lossRaw), Number(groundStationInfo.value.bandwidthRaw));
     renderGroundCharts();
     renderAllAircraftCharts();
+    lastChartPushAtMs = now;
   }
   syncMiniMapTime();
 }
