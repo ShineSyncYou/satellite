@@ -7,12 +7,8 @@
         <p>场景：<strong>{{ activeScenarioLabel }}</strong> · 时刻：<strong>{{ formattedTime }}</strong> · 速率：<strong>{{ playbackText }}</strong></p>
       </div>
       <div class="header-right">
-        <label for="metricsScenario">场景</label>
-        <select id="metricsScenario" v-model="state.scenarioKey" @change="handleScenarioChange">
-          <option v-for="option in scenarioOptions" :key="option.key" :value="option.key">{{ option.label }}</option>
-        </select>
         <button type="button" @click="openMainScreen">打开3D主屏</button>
-        <span class="sync-badge" :class="{ online: state.channelOnline }">{{ state.channelOnline ? "已连接主屏" : "本地独立运行" }}</span>
+        <span class="sync-badge" :class="{ online: state.channelOnline }">{{ syncStatusText }}</span>
       </div>
     </header>
 
@@ -118,8 +114,12 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import loadSatsimScenario from "../lib/loadSatsimScenario";
 // 副屏图表直接消费 bundle.json，而不是从 CZML 里反向解析业务数据。
 import { loadSatsimBundleSource } from "../lib/bundleRouteMetrics";
-import { getScenarioRecordSync, listRunnableScenarioRecords, listScenarioOptions, refreshServerScenarioRecords, resolveScenarioRuntime } from "../lib/runtimeScenarioCatalog";
-import { createScreenSyncChannel, postScreenSyncMessage, SCREEN_SYNC_MESSAGE_TYPES } from "../lib/screenSync";
+import { getScenarioRecordSync, listRunnableScenarioRecords, refreshServerScenarioRecords, resolveScenarioRuntime } from "../lib/runtimeScenarioCatalog";
+import {
+  createScreenSyncChannel,
+  postScreenSyncMessage,
+  SCREEN_SYNC_MESSAGE_TYPES,
+} from "../lib/screenSync";
 import {
   applyGlobeImageryLayers,
   bindAmapImageryFallback,
@@ -129,7 +129,6 @@ import { openMainScreenWindow } from "../lib/openScreenWindow";
 import "../Widgets/widgets.css";
 import "@google/model-viewer";
 
-const REMOTE_SIGNAL_TIMEOUT_MS = 1600;
 const DASHBOARD_UPDATE_THROTTLE_MS = 120;
 const CHART_PUSH_MIN_INTERVAL_MS = 260;
 const CHART_MAX_POINTS = 4000;
@@ -141,23 +140,15 @@ const AIRCRAFT_METRIC_OPTIONS = Object.freeze([
 ]);
 
 const initialScenarioKey = new URLSearchParams(window.location.search).get("scenario") || "";
-const state = reactive({ scenarioKey: initialScenarioKey, durationS: 0, currentTimeS: 0, playbackMultiplier: 6, shouldAnimate: true, loading: false, error: "", channelOnline: false });
+const state = reactive({ scenarioKey: initialScenarioKey, durationS: 0, currentTimeS: 0, playbackMultiplier: 6, shouldAnimate: true, loading: false, error: "", channelOnline: false, primaryDisconnected: false, primaryExited: false });
 const satelliteRows = ref([]);
 const aircraftRows = ref([]);
 const groundStationInfo = ref({ id: "", positionText: "--", bandwidthText: "--", lossText: "--", connectedAircraftCount: 0, lossRaw: null, bandwidthRaw: null, latitude: null, longitude: null });
 const currentScenarioRuntime = ref(null);
-const scenarioCatalogRefreshKey = ref(0);
-const scenarioOptions = computed(() => {
-  scenarioCatalogRefreshKey.value;
-  return listScenarioOptions();
-});
 const weatherText = ref("--");
 
 let screenSyncChannel = null;
 let loadSequence = 0;
-let lastRemoteSignalAtMs = Number.NEGATIVE_INFINITY;
-let localPlaybackRafId = 0;
-let localPlaybackLastTickMs = Number.NaN;
 let lastDashboardRenderAtMs = Number.NEGATIVE_INFINITY;
 let lastChartPushAtMs = Number.NEGATIVE_INFINITY;
 let groundChartBootstrapTimeoutIds = [];
@@ -180,18 +171,23 @@ let removeBackgroundRotate = null;
 const miniImageryCleanup = { networkSync: null, fallback: null };
 const backgroundImageryCleanup = { networkSync: null, fallback: null };
 const groundChartSeries = { time: [], loss: [], bw: [] };
+const groundChartPinnedTimeByKey = new Map();
 const aircraftMiniChartHosts = new Map();
 const aircraftMiniCharts = new Map();
 const aircraftChartSeriesById = new Map();
 const aircraftChartRefHandlers = new Map();
+const aircraftChartPinnedTimeByKey = new Map();
 
-const activeScenarioLabel = computed(() => scenarioOptions.value.find((x) => x.key === state.scenarioKey)?.label || getScenarioRecordSync(state.scenarioKey)?.title || state.scenarioKey || "未选择场景");
+const activeScenarioLabel = computed(() => getScenarioRecordSync(state.scenarioKey)?.title || state.scenarioKey || "未选择场景");
 const formattedTime = computed(() => formatClockText(state.currentTimeS));
 const playbackText = computed(() => `${Number(state.playbackMultiplier || 0).toFixed(2)}x`);
+const syncStatusText = computed(() => {
+  if (state.channelOnline) return "已连接主屏";
+  if (state.primaryExited) return "主屏已退出";
+  return state.primaryDisconnected ? "主屏已断连" : "等待主屏连接";
+});
 
 const nowMs = () => (typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now());
-const hasFreshRemoteSignal = (now = nowMs()) => Number.isFinite(lastRemoteSignalAtMs) && (now - lastRemoteSignalAtMs) <= REMOTE_SIGNAL_TIMEOUT_MS;
-const markRemoteSignal = () => { lastRemoteSignalAtMs = nowMs(); state.channelOnline = true; };
 
 function normalizeRelativeTime(relativeTimeS, durationS) {
   const t = Number(relativeTimeS);
@@ -447,6 +443,7 @@ function ensureGroundCharts() {
     }
     if (!groundBandwidthChart) {
       groundBandwidthChart = echarts.init(bwHost, null, { renderer: "canvas" });
+      bindGroundChartInteractions("bw", groundBandwidthChart);
     }
   }
   if (lossHost) {
@@ -456,8 +453,65 @@ function ensureGroundCharts() {
     }
     if (!groundLossChart) {
       groundLossChart = echarts.init(lossHost, null, { renderer: "canvas" });
+      bindGroundChartInteractions("loss", groundLossChart);
     }
   }
+}
+
+function groundChartByMetric(metricKey) {
+  return metricKey === "bw" ? groundBandwidthChart : groundLossChart;
+}
+
+function clearPinnedGroundTooltip(metricKey) {
+  const chart = groundChartByMetric(metricKey);
+  groundChartPinnedTimeByKey.delete(metricKey);
+  if (!chart) return;
+  chart.setOption({
+    tooltip: {
+      triggerOn: "mousemove|click",
+      alwaysShowContent: false,
+    },
+  });
+  chart.dispatchAction({ type: "hideTip" });
+}
+
+function restorePinnedGroundTooltip(metricKey) {
+  const chart = groundChartByMetric(metricKey);
+  const pinnedTime = groundChartPinnedTimeByKey.get(metricKey);
+  if (!chart || !Number.isFinite(pinnedTime)) return;
+
+  const dataIndex = groundChartSeries.time.findIndex((time) => Math.abs(Number(time) - pinnedTime) < 1e-6);
+  if (dataIndex < 0) {
+    clearPinnedGroundTooltip(metricKey);
+    return;
+  }
+  chart.dispatchAction({ type: "showTip", seriesIndex: 0, dataIndex });
+}
+
+function pinGroundTooltip(metricKey, params) {
+  const chart = groundChartByMetric(metricKey);
+  const pinnedTime = Number(params?.data?.[0]);
+  if (!chart || !Number.isFinite(pinnedTime)) return;
+
+  groundChartPinnedTimeByKey.set(metricKey, pinnedTime);
+  chart.setOption({
+    tooltip: {
+      triggerOn: "none",
+      alwaysShowContent: true,
+    },
+  });
+  restorePinnedGroundTooltip(metricKey);
+}
+
+function bindGroundChartInteractions(metricKey, chart) {
+  chart.on("click", (params) => {
+    if (params?.componentType !== "series" || !Number.isInteger(params?.dataIndex)) return;
+    pinGroundTooltip(metricKey, params);
+  });
+  chart.getZr().on("click", (event) => {
+    if (event?.target) return;
+    clearPinnedGroundTooltip(metricKey);
+  });
 }
 
 function clearGroundChartBootstrapTimers() {
@@ -486,7 +540,8 @@ function scheduleGroundChartBootstrap(sequenceToken) {
 
 function renderGroundBandwidthChart() {
   if (!groundBandwidthChart) return;
-  groundBandwidthChart.setOption({
+  const data = groundChartSeries.time.map((t, i) => [t, groundChartSeries.bw[i]]);
+  const completeOption = {
     backgroundColor: "transparent",
     animation: false,
     title: {
@@ -498,6 +553,8 @@ function renderGroundBandwidthChart() {
     grid: { left: 52, right: 20, top: 24, bottom: 28 },
     tooltip: {
       trigger: "axis",
+      triggerOn: "mousemove|click",
+      alwaysShowContent: false,
       renderMode: "html",
       appendToBody: true,
       confine: false,
@@ -522,17 +579,29 @@ function renderGroundBandwidthChart() {
       splitLine: { lineStyle: { color: "rgba(86,132,168,0.22)" } },
     },
     series: [{
+      id: "ground-bw",
       type: "line",
       showSymbol: false,
       lineStyle: { width: 1.2, color: "#7c6cff" },
-      data: groundChartSeries.time.map((t, i) => [t, groundChartSeries.bw[i]]),
+      data,
     }],
-  }, true);
+  };
+  const existingSeries = groundBandwidthChart.getOption()?.series;
+  if (!Array.isArray(existingSeries) || existingSeries.length === 0) {
+    groundBandwidthChart.setOption(completeOption);
+  } else {
+    groundBandwidthChart.setOption({
+      xAxis: { max: Number(state.durationS || 0) },
+      series: [{ id: "ground-bw", data }],
+    });
+  }
+  restorePinnedGroundTooltip("bw");
 }
 
 function renderGroundLossChart() {
   if (!groundLossChart) return;
-  groundLossChart.setOption({
+  const data = groundChartSeries.time.map((t, i) => [t, groundChartSeries.loss[i]]);
+  const completeOption = {
     backgroundColor: "transparent",
     animation: false,
     title: {
@@ -544,6 +613,8 @@ function renderGroundLossChart() {
     grid: { left: 66, right: 20, top: 24, bottom: 28 },
     tooltip: {
       trigger: "axis",
+      triggerOn: "mousemove|click",
+      alwaysShowContent: false,
       renderMode: "html",
       appendToBody: true,
       confine: false,
@@ -568,12 +639,23 @@ function renderGroundLossChart() {
       splitLine: { lineStyle: { color: "rgba(86,132,168,0.22)" } },
     },
     series: [{
+      id: "ground-loss",
       type: "line",
       showSymbol: false,
       lineStyle: { width: 1.1, color: "#ff6b6b" },
-      data: groundChartSeries.time.map((t, i) => [t, groundChartSeries.loss[i]]),
+      data,
     }],
-  }, true);
+  };
+  const existingSeries = groundLossChart.getOption()?.series;
+  if (!Array.isArray(existingSeries) || existingSeries.length === 0) {
+    groundLossChart.setOption(completeOption);
+  } else {
+    groundLossChart.setOption({
+      xAxis: { max: Number(state.durationS || 0) },
+      series: [{ id: "ground-loss", data }],
+    });
+  }
+  restorePinnedGroundTooltip("loss");
 }
 
 function renderGroundCharts() {
@@ -582,6 +664,7 @@ function renderGroundCharts() {
 }
 
 function resetGroundCharts() {
+  groundChartPinnedTimeByKey.clear();
   groundChartSeries.time = [];
   groundChartSeries.loss = [];
   groundChartSeries.bw = [];
@@ -731,6 +814,7 @@ function disposeAircraftMiniChart(chartKey) {
     chart.dispose();
     aircraftMiniCharts.delete(chartKey);
   }
+  aircraftChartPinnedTimeByKey.delete(chartKey);
   aircraftMiniChartHosts.delete(chartKey);
   aircraftChartRefHandlers.delete(chartKey);
 }
@@ -752,9 +836,65 @@ function setAircraftMiniChartHost(id, metricKey, el) {
   }
   aircraftMiniChartHosts.set(chartKey, el);
   if (!aircraftMiniCharts.has(chartKey)) {
-    aircraftMiniCharts.set(chartKey, echarts.init(el, null, { renderer: "canvas" }));
+    const chart = echarts.init(el, null, { renderer: "canvas" });
+    bindAircraftMiniChartInteractions(chartKey, chart);
+    aircraftMiniCharts.set(chartKey, chart);
   }
   renderAircraftMiniChart(id, metricKey);
+}
+
+function clearPinnedAircraftTooltip(chartKey) {
+  const chart = aircraftMiniCharts.get(chartKey);
+  aircraftChartPinnedTimeByKey.delete(chartKey);
+  if (!chart) return;
+  chart.setOption({
+    tooltip: {
+      triggerOn: "mousemove|click",
+      alwaysShowContent: false,
+    },
+  });
+  chart.dispatchAction({ type: "hideTip" });
+}
+
+function restorePinnedAircraftTooltip(chartKey) {
+  const chart = aircraftMiniCharts.get(chartKey);
+  const pinnedTime = aircraftChartPinnedTimeByKey.get(chartKey);
+  if (!chart || !Number.isFinite(pinnedTime)) return;
+
+  const [id] = chartKey.split("::");
+  const series = aircraftChartSeriesById.get(id);
+  const dataIndex = series?.time?.findIndex((time) => Math.abs(Number(time) - pinnedTime) < 1e-6) ?? -1;
+  if (dataIndex < 0) {
+    clearPinnedAircraftTooltip(chartKey);
+    return;
+  }
+  chart.dispatchAction({ type: "showTip", seriesIndex: 0, dataIndex });
+}
+
+function pinAircraftTooltip(chartKey, params) {
+  const chart = aircraftMiniCharts.get(chartKey);
+  const pinnedTime = Number(params?.data?.[0]);
+  if (!chart || !Number.isFinite(pinnedTime)) return;
+
+  aircraftChartPinnedTimeByKey.set(chartKey, pinnedTime);
+  chart.setOption({
+    tooltip: {
+      triggerOn: "none",
+      alwaysShowContent: true,
+    },
+  });
+  restorePinnedAircraftTooltip(chartKey);
+}
+
+function bindAircraftMiniChartInteractions(chartKey, chart) {
+  chart.on("click", (params) => {
+    if (params?.componentType !== "series" || !Number.isInteger(params?.dataIndex)) return;
+    pinAircraftTooltip(chartKey, params);
+  });
+  chart.getZr().on("click", (event) => {
+    if (event?.target) return;
+    clearPinnedAircraftTooltip(chartKey);
+  });
 }
 
 function renderAircraftMiniChart(id, metricKey) {
@@ -799,7 +939,7 @@ function renderAircraftMiniChart(id, metricKey) {
     : metricKey === "bw"
       ? " Mbps"
       : "";
-  chart.setOption({
+  const completeOption = {
     backgroundColor: "transparent",
     animation: false,
     grid: { left: 28, right: 8, top: 8, bottom: 14 },
@@ -828,6 +968,7 @@ function renderAircraftMiniChart(id, metricKey) {
       show: true,
       trigger: "axis",
       triggerOn: "mousemove|click",
+      alwaysShowContent: false,
       renderMode: "html",
       appendToBody: true,
       confine: false,
@@ -849,19 +990,33 @@ function renderAircraftMiniChart(id, metricKey) {
       },
     },
     series: [{
+      id: chartKey,
       type: "line",
       showSymbol: false,
       lineStyle: { width: 1, color: metric.color },
       emphasis: { lineStyle: { width: 1.4, color: metric.color } },
       data,
     }],
-  }, true);
+  };
+
+  const existingSeries = chart.getOption()?.series;
+  if (!Array.isArray(existingSeries) || existingSeries.length === 0) {
+    chart.setOption(completeOption);
+  } else {
+    chart.setOption({
+      xAxis: { max: Number(state.durationS || 0) },
+      yAxis: { min: yAxisMin, max: yAxisMax },
+      series: [{ id: chartKey, data }],
+    });
+  }
+  restorePinnedAircraftTooltip(chartKey);
 }
 
 function resetAircraftCharts() {
   for (const chart of aircraftMiniCharts.values()) {
     chart.clear();
   }
+  aircraftChartPinnedTimeByKey.clear();
   aircraftChartSeriesById.clear();
 }
 
@@ -1044,7 +1199,25 @@ async function handleSyncMessage(event) {
   const payload = message.payload || {};
   if (!type) return;
 
-  markRemoteSignal();
+  if (type === SCREEN_SYNC_MESSAGE_TYPES.MAIN_SCREEN_DISCONNECTED) {
+    state.channelOnline = false;
+    state.primaryDisconnected = true;
+    state.primaryExited = false;
+    state.shouldAnimate = false;
+    return;
+  }
+
+  if (type === SCREEN_SYNC_MESSAGE_TYPES.MAIN_SCREEN_EXITED) {
+    state.channelOnline = false;
+    state.primaryDisconnected = false;
+    state.primaryExited = true;
+    state.shouldAnimate = false;
+    return;
+  }
+
+  state.channelOnline = true;
+  state.primaryDisconnected = false;
+  state.primaryExited = false;
   if (type === SCREEN_SYNC_MESSAGE_TYPES.STATE_SNAPSHOT) {
     await applySnapshot(payload);
     return;
@@ -1066,12 +1239,6 @@ async function handleSyncMessage(event) {
   }
 }
 
-async function handleScenarioChange() {
-  if (!getScenarioRecordSync(state.scenarioKey)) return;
-  await loadScenarioMetrics(state.scenarioKey);
-  postScreenSyncMessage(screenSyncChannel, SCREEN_SYNC_MESSAGE_TYPES.SCENARIO_CHANGED, { scenarioKey: state.scenarioKey });
-}
-
 function openMainScreen() {
   const opened = openMainScreenWindow(state.scenarioKey);
   if (!opened) window.open(`/#/run?scenario=${encodeURIComponent(state.scenarioKey)}`, "_blank");
@@ -1082,36 +1249,6 @@ function connectScreenSync() {
   if (!screenSyncChannel) return;
   screenSyncChannel.onmessage = (event) => { void handleSyncMessage(event); };
   postScreenSyncMessage(screenSyncChannel, SCREEN_SYNC_MESSAGE_TYPES.REQUEST_SNAPSHOT, {});
-}
-
-function tickLocalPlayback(now) {
-  if (hasFreshRemoteSignal(now)) {
-    state.channelOnline = true;
-    localPlaybackLastTickMs = now;
-  } else {
-    state.channelOnline = false;
-    if (!Number.isFinite(localPlaybackLastTickMs)) localPlaybackLastTickMs = now;
-    const deltaSeconds = Math.max(0, (now - localPlaybackLastTickMs) / 1000);
-    localPlaybackLastTickMs = now;
-    if (!state.loading && state.shouldAnimate && state.durationS > 0 && deltaSeconds > 0) {
-      state.currentTimeS = normalizeRelativeTime(Number(state.currentTimeS) + deltaSeconds * Number(state.playbackMultiplier || 1), state.durationS);
-    }
-  }
-  localPlaybackRafId = window.requestAnimationFrame(tickLocalPlayback);
-}
-
-function startLocalPlaybackTicker() {
-  if (localPlaybackRafId) return;
-  localPlaybackLastTickMs = Number.NaN;
-  localPlaybackRafId = window.requestAnimationFrame(tickLocalPlayback);
-}
-
-function stopLocalPlaybackTicker() {
-  if (localPlaybackRafId) {
-    window.cancelAnimationFrame(localPlaybackRafId);
-    localPlaybackRafId = 0;
-  }
-  localPlaybackLastTickMs = Number.NaN;
 }
 
 function resizeDashboard() {
@@ -1134,7 +1271,6 @@ watch(aircraftRows, async () => {
 onMounted(async () => {
   initBackgroundGlobe();
   await refreshServerScenarioRecords().catch(() => []);
-  scenarioCatalogRefreshKey.value += 1;
   if (!getScenarioRecordSync(state.scenarioKey)) {
     state.scenarioKey = listRunnableScenarioRecords()[0]?.id || "";
   }
@@ -1144,13 +1280,11 @@ onMounted(async () => {
     state.error = "暂无可运行场景，请先在场景配置库导入或生成场景。";
   }
   connectScreenSync();
-  startLocalPlaybackTicker();
   window.addEventListener("resize", resizeDashboard);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener("resize", resizeDashboard);
-  stopLocalPlaybackTicker();
   if (screenSyncChannel) {
     screenSyncChannel.close();
     screenSyncChannel = null;
@@ -1166,10 +1300,12 @@ onBeforeUnmount(() => {
     groundLossChart.dispose();
     groundLossChart = null;
   }
+  groundChartPinnedTimeByKey.clear();
   clearGroundChartBootstrapTimers();
   for (const chart of aircraftMiniCharts.values()) chart.dispose();
   aircraftMiniCharts.clear();
   aircraftMiniChartHosts.clear();
+  aircraftChartPinnedTimeByKey.clear();
   aircraftChartSeriesById.clear();
   aircraftChartRefHandlers.clear();
   destroyBackgroundGlobe();
@@ -1206,8 +1342,7 @@ onBeforeUnmount(() => {
 .header-left h1 { margin: 0; font-size: 20px; font-weight: 700; }
 .header-left p { margin: 6px 0 0; font-size: 13px; color: #9fbbd6; }
 .header-right { display: flex; align-items: center; gap: 10px; }
-.header-right label { font-size: 12px; color: #b8cee3; }
-.header-right select, .header-right button { height: 32px; border-radius: 8px; border: 1px solid rgba(120, 170, 208, 0.46); background: rgba(13, 29, 48, 0.62); color: #dce8f5; padding: 0 10px; }
+.header-right button { height: 32px; border-radius: 8px; border: 1px solid rgba(120, 170, 208, 0.46); background: rgba(13, 29, 48, 0.62); color: #dce8f5; padding: 0 10px; }
 .header-right button { cursor: pointer; }
 .sync-badge { font-size: 12px; padding: 4px 8px; border-radius: 6px; background: rgba(148, 63, 63, 0.34); color: #ffd4d4; }
 .sync-badge.online { background: rgba(73, 142, 94, 0.28); color: #d4f6dc; }
@@ -1395,7 +1530,6 @@ onBeforeUnmount(() => {
   .header-right {
     gap: 8px;
   }
-  .header-right select,
   .header-right button {
     width: 100%;
   }

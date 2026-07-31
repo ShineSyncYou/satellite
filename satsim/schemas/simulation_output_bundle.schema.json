@@ -50,8 +50,8 @@
         "base_time_step_s",
         "event_sampling_enabled",
         "event_sampling_min_step_s",
-        "beam",
         "penalty_model",
+        "beam",
         "units"
       ],
       "properties": {
@@ -59,7 +59,7 @@
           "type": "string",
           "description": "Schema version of the output package.",
           "examples": [
-            "1.0.0"
+            "1.3.0"
           ]
         },
         "output_mode": {
@@ -103,11 +103,11 @@
           "minimum": 0,
           "description": "Minimum event-refinement interval in seconds. Null when event-driven sampling is disabled."
         },
-        "beam": {
-          "$ref": "#/$defs/BeamConfig"
-        },
         "penalty_model": {
           "$ref": "#/$defs/PenaltyModel"
+        },
+        "beam": {
+          "$ref": "#/$defs/BeamConfig"
         },
         "constellation": {
           "$ref": "#/$defs/ConstellationInfo"
@@ -127,13 +127,15 @@
       "properties": {
         "sat_antenna_angle_deg": {
           "type": "number",
-          "exclusiveMinimum": 0,
-          "description": "LEO and non-GEO antenna half-angle used by the access model."
+          "minimum": 0,
+          "exclusiveMaximum": 90,
+          "description": "Effective LEO satellite antenna half-angle read from sat_antenna_angle, in degrees."
         },
         "geo_sat_antenna_angle_deg": {
           "type": "number",
-          "exclusiveMinimum": 0,
-          "description": "GEO antenna half-angle used by the access model."
+          "minimum": 0,
+          "exclusiveMaximum": 90,
+          "description": "Effective GEO satellite antenna half-angle in degrees. Falls back to sat_antenna_angle when geo_sat_antenna_angle is omitted."
         }
       }
     },

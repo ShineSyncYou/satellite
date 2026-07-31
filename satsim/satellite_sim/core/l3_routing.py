@@ -539,12 +539,19 @@ class RoutingEngine:
 
         routes: list[RoutePlan] = []
         previous_route_paths = previous_route_paths or {}
+        satellite_node_ids = set(self.satellite_ids)
         for demand in demands:
             try:
+                # Aircraft and ground stations are traffic endpoints, not packet
+                # forwarding nodes.  Build a demand-specific graph view that
+                # retains the shared satellite topology and only the two
+                # terminals belonging to the current demand.
+                allowed_node_ids = satellite_node_ids | {demand.source, demand.target}
+                demand_graph = graph.subgraph(allowed_node_ids)
                 previous_path = list(previous_route_paths.get(self._route_identity(demand), []))
                 previous_edge_keys = self._path_edge_keys(previous_path)
                 path = nx.shortest_path(
-                    graph,
+                    demand_graph,
                     demand.source,
                     demand.target,
                     weight=self._edge_weight_with_switching_cost(

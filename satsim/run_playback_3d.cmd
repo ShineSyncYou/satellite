@@ -1,4 +1,4 @@
-:: 示例命令: .\run_playback_3d.cmd data/simulation_bundle_gw2_800sat_5ac_1gs_30s_busy.json 35 0.55
+:: 示例命令: .\run_playback_3d.cmd data/simulation_bundle_gw2_800sat_5ac_1gs_30s_busy.json 0.55
 @echo off
 setlocal
 
@@ -59,17 +59,20 @@ if "%NEED_REBUILD%"=="1" (
 set "INPUT_PATH=data/simulation_bundle_gw2_800sat_5ac_1gs_30s_seam.json"
 if not "%~1"=="" set "INPUT_PATH=%~1"
 
-set "CONE_ANGLE_DEG=35"
-if not "%~2"=="" set "CONE_ANGLE_DEG=%~2"
-
 set "FRAME_INTERVAL=0.55"
-if not "%~3"=="" set "FRAME_INTERVAL=%~3"
+if not "%~2"=="" set "FRAME_INTERVAL=%~2"
+
+if not "%~3"=="" (
+    echo [ERROR] Too many arguments.
+    echo [ERROR] Cone angles are now read from bundle metadata.beam.
+    echo [ERROR] Usage: run_playback_3d.cmd [bundle_path] [frame_interval]
+    exit /b 2
+)
 
 echo [playback_3d] input=%INPUT_PATH%
-echo [playback_3d] cone_angle_deg=%CONE_ANGLE_DEG%
 echo [playback_3d] frame_interval=%FRAME_INTERVAL%
 echo [playback_3d] python=%VENV_PY%
-"%VENV_PY%" result_player/playback_3d.py --input "%INPUT_PATH%" --cone-angle-deg "%CONE_ANGLE_DEG%" --frame-interval "%FRAME_INTERVAL%"
+"%VENV_PY%" result_player/playback_3d.py --input "%INPUT_PATH%" --frame-interval "%FRAME_INTERVAL%"
 set "EXIT_CODE=%ERRORLEVEL%"
 
 if not "%EXIT_CODE%"=="0" (

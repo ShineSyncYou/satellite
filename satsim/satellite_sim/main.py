@@ -191,14 +191,16 @@ def _build_metadata(config: SimulationConfig, assets: PreparedSimulationAssets) 
         "base_time_step_s": config.time_step,
         "event_sampling_enabled": config.event_sampling_enabled,
         "event_sampling_min_step_s": (config.event_sampling_min_step if config.event_sampling_enabled else None),
+        "penalty_model": _build_penalty_model_metadata(config),
         "beam": {
             "sat_antenna_angle_deg": _round_float(config.sat_antenna_angle, 6),
             "geo_sat_antenna_angle_deg": _round_float(
-                config.geo_sat_antenna_angle if config.geo_sat_antenna_angle is not None else config.sat_antenna_angle,
+                config.geo_sat_antenna_angle
+                if config.geo_sat_antenna_angle is not None
+                else config.sat_antenna_angle,
                 6,
             ),
         },
-        "penalty_model": _build_penalty_model_metadata(config),
         "constellation": {
             "tle_file": config.tle_file.name,
             "isl_mode": config.isl_mode,

@@ -207,28 +207,23 @@ walker 模式附加参数：
 56 星场景：
 
 ```powershell
-c:/Users/miao/Desktop/satsim/.venv/Scripts/python.exe result_player/playback_3d.py --input data/simulation_bundle_56sat_5ac_1gs_30s.json --cone-angle-deg 70
+c:/Users/miao/Desktop/satsim/.venv/Scripts/python.exe result_player/playback_3d.py --input data/simulation_bundle_56sat_5ac_1gs_30s.json
 ```
 
 GW2 800 星场景：
 
 ```powershell
-c:/Users/miao/Desktop/satsim/.venv/Scripts/python.exe result_player/playback_3d.py --input data/simulation_bundle_gw2_800sat_5ac_1gs_30s.json --cone-angle-deg 35
+c:/Users/miao/Desktop/satsim/.venv/Scripts/python.exe result_player/playback_3d.py --input data/simulation_bundle_gw2_800sat_5ac_1gs_30s.json
 ```
 
-### 播放旧版逐帧结果
-
-```powershell
-c:/Users/miao/Desktop/satsim/.venv/Scripts/python.exe result_player/playback_3d.py --input data/simulation_results_56sat_5ac_1gs_30s_10min.json --cone-angle-deg 70
-```
+播放器从 `metadata.beam` 分别读取 LEO 和 GEO 天线半张角。旧版逐帧结果或缺少
+`metadata.beam` 的旧 bundle 需要使用当前仿真程序重新生成。
 
 ### 参数说明
 
 1. --input
-   输入 JSON 文件路径，支持旧版逐帧快照格式和新版总包格式。
-2. --cone-angle-deg
-   覆盖椎体半张角，单位度。该值不在输出 JSON 中，需要手动提供。
-3. --frame-interval
+   输入新版 bundle JSON 文件路径，其中必须包含 `metadata.beam`。
+2. --frame-interval
    播放器在 1x 速度下的单帧显示时长，单位秒。
 
 ### 键位说明

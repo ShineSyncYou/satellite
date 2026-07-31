@@ -10,6 +10,8 @@
  * - SCENARIO_CHANGED: 场景切换通知
  * - PLAYBACK_CHANGED: 播放速度/状态变化通知
  * - REQUEST_SNAPSHOT: 副屏向主屏请求最新状态快照
+ * - MAIN_SCREEN_DISCONNECTED: 主屏隐藏或进入后台，副屏保持最后一帧
+ * - MAIN_SCREEN_EXITED: 主屏退出仿真，副屏停止在最后一帧
  */
 
 export const SCREEN_SYNC_CHANNEL = "satsim-screen-sync-v1";
@@ -20,6 +22,8 @@ export const SCREEN_SYNC_MESSAGE_TYPES = Object.freeze({
   SCENARIO_CHANGED: "SCENARIO_CHANGED",
   PLAYBACK_CHANGED: "PLAYBACK_CHANGED",
   REQUEST_SNAPSHOT: "REQUEST_SNAPSHOT",
+  MAIN_SCREEN_DISCONNECTED: "MAIN_SCREEN_DISCONNECTED",
+  MAIN_SCREEN_EXITED: "MAIN_SCREEN_EXITED",
 });
 
 /**
@@ -50,4 +54,3 @@ export function postScreenSyncMessage(channel, type, payload = {}) {
     timestampMs: Date.now(),
   });
 }
-

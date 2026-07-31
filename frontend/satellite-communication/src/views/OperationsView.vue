@@ -13,51 +13,48 @@
     </div>
 
     <div class="tool-bar">
-      <label class="scenario-label" for="scenarioSelect">场景</label>
-      <div id="scenarioSelect" class="scenario-select custom-select" :class="{ open: isScenarioMenuOpen }">
-        <button type="button" class="custom-select-trigger" :disabled="isScenarioSwitching" @click="toggleScenarioMenu">
-          {{ selectedScenarioLabel }}
+      <div class="toolbar-actions">
+        <button class="tool-btn" :disabled="isScenarioSwitching" @click="goBackToLanding">返回首页</button>
+        <button class="tool-btn" :disabled="isScenarioSwitching" @click="flyToChina">中国居中</button>
+        <button class="tool-btn" :disabled="isScenarioSwitching" @click="openMetricsScreen">打开参数副屏</button>
+      </div>
+    </div>
+
+    <div class="playback-group" aria-label="仿真播放">
+      <button type="button" class="tool-btn" :disabled="isScenarioSwitching" @click="togglePlaybackPause">
+        {{ playbackPaused ? "播放" : "暂停" }}
+      </button>
+      <span class="playback-time">{{ playbackCurrentTimeText }}</span>
+      <input
+        class="playback-progress"
+        type="range"
+        min="0"
+        :max="playbackDurationS"
+        step="0.1"
+        :value="playbackProgressValue"
+        :disabled="isScenarioSwitching || playbackDurationS <= 0"
+        aria-label="仿真播放进度"
+        @input="onPlaybackProgressInput"
+        @change="onPlaybackProgressChange"
+      />
+      <span class="playback-time playback-time--duration">{{ playbackDurationText }}</span>
+      <label class="playback-label" for="playbackSpeedSelect">速率</label>
+      <div id="playbackSpeedSelect" class="scenario-select custom-select" :class="{ open: isSpeedMenuOpen }">
+        <button type="button" class="custom-select-trigger" :disabled="isScenarioSwitching" @click="toggleSpeedMenu">
+          {{ selectedPlaybackSpeedLabel }}
         </button>
-        <ul v-show="isScenarioMenuOpen" class="custom-select-menu">
-          <li v-for="option in scenarioOptions" :key="option.key">
+        <ul v-show="isSpeedMenuOpen" class="custom-select-menu custom-select-menu--up">
+          <li v-for="speed in PLAYBACK_SPEED_OPTIONS" :key="speed">
             <button
               type="button"
               class="custom-select-option"
-              :class="{ active: option.key === selectedScenario }"
-              @click="chooseScenario(option.key)"
+              :class="{ active: speed === playbackMultiplier }"
+              @click="choosePlaybackSpeed(speed)"
             >
-              {{ option.label }}
+              {{ speed }}×
             </button>
           </li>
         </ul>
-      </div>
-
-      <button class="tool-btn" :disabled="isScenarioSwitching" @click="goBackToLanding">返回首页</button>
-      <button class="tool-btn" :disabled="isScenarioSwitching" @click="flyToChina">中国居中</button>
-      <button class="tool-btn" :disabled="isScenarioSwitching" @click="openMetricsScreen">打开参数副屏</button>
-
-      <div class="playback-group" aria-label="仿真播放">
-        <button type="button" class="tool-btn" :disabled="isScenarioSwitching" @click="togglePlaybackPause">
-          {{ playbackPaused ? "播放" : "暂停" }}
-        </button>
-        <label class="playback-label" for="playbackSpeedSelect">速率</label>
-        <div id="playbackSpeedSelect" class="scenario-select custom-select" :class="{ open: isSpeedMenuOpen }">
-          <button type="button" class="custom-select-trigger" :disabled="isScenarioSwitching" @click="toggleSpeedMenu">
-            {{ selectedPlaybackSpeedLabel }}
-          </button>
-          <ul v-show="isSpeedMenuOpen" class="custom-select-menu">
-            <li v-for="speed in PLAYBACK_SPEED_OPTIONS" :key="speed">
-              <button
-                type="button"
-                class="custom-select-option"
-                :class="{ active: speed === playbackMultiplier }"
-                @click="choosePlaybackSpeed(speed)"
-              >
-                {{ speed }}×
-              </button>
-            </li>
-          </ul>
-        </div>
       </div>
     </div>
     <div v-if="coverageWarning" class="coverage-warning" role="status">{{ coverageWarning }}</div>
@@ -191,10 +188,14 @@ import * as Cesium from "cesium";
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import loadSatsimScenario from "../lib/loadSatsimScenario";
-import { getScenarioRecordSync, listRunnableScenarioRecords, listScenarioOptions, refreshServerScenarioRecords, resolveScenarioRuntime } from "../lib/runtimeScenarioCatalog";
+import { getScenarioRecordSync, listRunnableScenarioRecords, refreshServerScenarioRecords, resolveScenarioRuntime } from "../lib/runtimeScenarioCatalog";
 import { fetchServerScenario } from "../lib/simulationAdapter";
 import { getAirportByCode } from "../lib/airportCatalog";
-import { createScreenSyncChannel, postScreenSyncMessage, SCREEN_SYNC_MESSAGE_TYPES } from "../lib/screenSync";
+import {
+  createScreenSyncChannel,
+  postScreenSyncMessage,
+  SCREEN_SYNC_MESSAGE_TYPES,
+} from "../lib/screenSync";
 import {
   applyGlobeImageryLayers,
   bindAmapImageryFallback,
@@ -228,27 +229,25 @@ const aircraftRoutes = ref([]);
 const focusedAircraftId = ref("");
 const modelViewerReady = ref(typeof window !== "undefined" && Boolean(window.customElements?.get("model-viewer")));
 const modelPreviewError = ref(false);
-const isScenarioMenuOpen = ref(false);
 const isSpeedMenuOpen = ref(false);
 const currentScenarioRuntime = ref(null);
-const scenarioCatalogRefreshKey = ref(0);
 const sceneLoading = ref(true);
 const sceneLoadingText = ref("正在准备场景资源...");
 const sceneLoadError = ref("");
 const sceneEmpty = ref(false);
 const coverageWarning = ref("");
 const cameraHeightText = ref("--");
+const playbackCurrentTimeS = ref(0);
+const playbackDurationS = ref(0);
+const playbackSeekPreviewS = ref(0);
+const isPlaybackScrubbing = ref(false);
 const emptyScenarioText = "请先在场景配置库导入或生成场景。";
-const scenarioOptions = computed(() => {
-  scenarioCatalogRefreshKey.value;
-  return listScenarioOptions();
-});
-const selectedScenarioLabel = computed(
-  () => scenarioOptions.value.find((option) => option.key === selectedScenario.value)?.label
-    || getScenarioRecordSync(selectedScenario.value)?.title
-    || "未选择场景",
-);
 const selectedPlaybackSpeedLabel = computed(() => `${playbackMultiplier.value}×`);
+const playbackProgressValue = computed(
+  () => isPlaybackScrubbing.value ? playbackSeekPreviewS.value : playbackCurrentTimeS.value,
+);
+const playbackCurrentTimeText = computed(() => formatPlaybackTime(playbackProgressValue.value));
+const playbackDurationText = computed(() => formatPlaybackTime(playbackDurationS.value));
 
 
 // ============= Cesium 相关 =============
@@ -261,6 +260,7 @@ let removeScreenSyncTick = null;                                      // 屏幕�
 let lastRotateTime = null;                                            // 上次自转计算时刻
 let mainScenarioHandle = null;                                        // 主屏场景加载句柄
 let screenSyncChannel = null;                                         // 副屏同步通道
+let mainScreenExitBroadcasted = false;                                // 避免退出消息重复发送
 let lastSyncTickAtMs = Number.NEGATIVE_INFINITY;                      // 上次同步的时间戳
 let lastPlaybackSignature = "";                                       // 上次播放状态的签名
 let pickHandler = null;                                               // 鼠标拾取事件
@@ -344,6 +344,26 @@ function nodeTypeLabel(nodeType) {
 function formatFixed(value, digits = 2, suffix = "") {
   if (!Number.isFinite(Number(value))) return "--";
   return `${Number(value).toFixed(digits)}${suffix}`;
+}
+
+function formatPlaybackTime(seconds) {
+  const totalSeconds = Math.max(0, Number(seconds) || 0);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const remainingSeconds = Math.floor(totalSeconds % 60);
+  if (hours > 0) {
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+  }
+  return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+}
+
+function clampPlaybackTime(value) {
+  const durationSeconds = Math.max(0, Number(playbackDurationS.value) || 0);
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue) || durationSeconds <= 0) {
+    return 0;
+  }
+  return Math.min(durationSeconds, Math.max(0, numericValue));
 }
 
 /**
@@ -681,32 +701,37 @@ function togglePlaybackPause() {
   applyPlaybackToViewers();
 }
 
-function closeToolbarMenus() {
-  isScenarioMenuOpen.value = false;
-  isSpeedMenuOpen.value = false;
+function onPlaybackProgressInput(event) {
+  isPlaybackScrubbing.value = true;
+  playbackSeekPreviewS.value = clampPlaybackTime(event?.target?.value);
 }
 
-function toggleScenarioMenu() {
-  if (isScenarioSwitching.value) return;
-  isScenarioMenuOpen.value = !isScenarioMenuOpen.value;
-  if (isScenarioMenuOpen.value) {
-    isSpeedMenuOpen.value = false;
+function onPlaybackProgressChange(event) {
+  const targetTimeS = clampPlaybackTime(event?.target?.value);
+  playbackSeekPreviewS.value = targetTimeS;
+
+  if (viewer && !viewer.isDestroyed() && mainScenarioHandle?.bundle?.startJulian) {
+    viewer.clock.currentTime = Cesium.JulianDate.addSeconds(
+      mainScenarioHandle.bundle.startJulian,
+      targetTimeS,
+      new Cesium.JulianDate(),
+    );
+    latestRelativeTimeS = targetTimeS;
+    playbackCurrentTimeS.value = targetTimeS;
+    viewer.scene.requestRender();
+    broadcastSnapshot();
   }
+
+  isPlaybackScrubbing.value = false;
+}
+
+function closeToolbarMenus() {
+  isSpeedMenuOpen.value = false;
 }
 
 function toggleSpeedMenu() {
   if (isScenarioSwitching.value) return;
   isSpeedMenuOpen.value = !isSpeedMenuOpen.value;
-  if (isSpeedMenuOpen.value) {
-    isScenarioMenuOpen.value = false;
-  }
-}
-
-function chooseScenario(nextScenario) {
-  closeToolbarMenus();
-  if (isScenarioSwitching.value || nextScenario === selectedScenario.value) return;
-  selectedScenario.value = nextScenario;
-  void switchScenario();
 }
 
 function choosePlaybackSpeed(nextSpeed) {
@@ -944,6 +969,30 @@ function broadcastPlaybackChanged() {
   });
 }
 
+function broadcastMainScreenExited() {
+  if (!screenSyncChannel || mainScreenExitBroadcasted) return;
+  mainScreenExitBroadcasted = true;
+  postScreenSyncMessage(screenSyncChannel, SCREEN_SYNC_MESSAGE_TYPES.MAIN_SCREEN_EXITED, {
+    scenarioKey: selectedScenario.value,
+    relativeTimeS: latestRelativeTimeS,
+  });
+}
+
+function handleDocumentVisibilityChange() {
+  if (document.visibilityState === "hidden") {
+    if (!screenSyncChannel || mainScreenExitBroadcasted) return;
+    postScreenSyncMessage(screenSyncChannel, SCREEN_SYNC_MESSAGE_TYPES.MAIN_SCREEN_DISCONNECTED, {
+      scenarioKey: selectedScenario.value,
+      relativeTimeS: latestRelativeTimeS,
+    });
+    return;
+  }
+
+  mainScreenExitBroadcasted = false;
+  broadcastSnapshot();
+  broadcastPlaybackChanged();
+}
+
 
 /**
  * 绑定屏幕同步 TICK
@@ -1037,6 +1086,7 @@ function handleScreenSyncMessage(event) {
  * 创建 BroadcastChannel 并设置消息监听
  */
 function initializeScreenSync() {
+  mainScreenExitBroadcasted = false;
   screenSyncChannel = createScreenSyncChannel();
   if (!screenSyncChannel) {
     return;
@@ -1061,6 +1111,7 @@ function closeScreenSync() {
  * 动画时长 1.5 秒
  */
 function goBackToLanding() {
+  broadcastMainScreenExited();
   void router.push({ name: "landing" });
 }
 
@@ -1178,6 +1229,10 @@ function destroyAllScenes() {
   latestActiveTopology = new Map();
   latestActiveRoutes = new Map();
   latestRelativeTimeS = 0;
+  playbackCurrentTimeS.value = 0;
+  playbackDurationS.value = 0;
+  playbackSeekPreviewS.value = 0;
+  isPlaybackScrubbing.value = false;
   aircraftRoutes.value = [];
   focusedAircraftId.value = "";
   clearSelectedEntity();
@@ -1239,6 +1294,9 @@ async function initializeMainScene() {
     playbackMultiplier: playbackMultiplier.value,
     onSimulationTick: ({ relativeTimeS, activeTopology, activeRoutes }) => {
       latestRelativeTimeS = Number(relativeTimeS) || 0;
+      if (!isPlaybackScrubbing.value) {
+        playbackCurrentTimeS.value = Math.max(0, latestRelativeTimeS);
+      }
       latestActiveTopology = activeTopology || new Map();
       latestActiveRoutes = activeRoutes || new Map();
       if (selectedEntityId.value) {
@@ -1246,6 +1304,8 @@ async function initializeMainScene() {
       }
     },
   });
+  playbackDurationS.value = Math.max(0, Number(mainScenarioHandle.bundle.durationSeconds) || 0);
+  playbackCurrentTimeS.value = clampPlaybackTime(latestRelativeTimeS);
   const visibleAircraftIds = [...mainScenarioHandle.bundle.visibleNodeIds]
     .filter((nodeId) => mainScenarioHandle.bundle.nodeTypeMap.get(nodeId) === "aircraft")
     .sort((left, right) => left.localeCompare(right));
@@ -1310,8 +1370,9 @@ onMounted(async () => {
   document.body.classList.add("scene-page");
   document.getElementById("app")?.classList.add("scene-page");
   document.addEventListener("pointerdown", handleDocumentPointerDown);
+  document.addEventListener("visibilitychange", handleDocumentVisibilityChange);
+  window.addEventListener("pagehide", broadcastMainScreenExited);
   await refreshServerScenarioRecords().catch(() => []);
-  scenarioCatalogRefreshKey.value += 1;
   if (!ensureSelectedScenario()) {
     syncRouteScenarioQuery();
     initializeScreenSync();
@@ -1338,6 +1399,9 @@ onBeforeUnmount(() => {
   document.body.classList.remove("scene-page");
   document.getElementById("app")?.classList.remove("scene-page");
   document.removeEventListener("pointerdown", handleDocumentPointerDown);
+  document.removeEventListener("visibilitychange", handleDocumentVisibilityChange);
+  window.removeEventListener("pagehide", broadcastMainScreenExited);
+  broadcastMainScreenExited();
   destroyAllScenes();
   closeScreenSync();
 });
@@ -1445,14 +1509,19 @@ onBeforeUnmount(() => {
   top: 12px;
   right: 12px;
   display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: calc(100vw - 24px);
+  z-index: 20;
+}
+
+.toolbar-actions {
+  display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  /* 统一间距 */
-  row-gap: 10px;
-  max-width: calc(100vw - 24px);
   justify-content: flex-end;
-  z-index: 20;
+  gap: 8px;
 }
 
 .coverage-warning {
@@ -1569,23 +1638,72 @@ onBeforeUnmount(() => {
 }
 
 .playback-group {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  z-index: 24;
   display: flex;
   align-items: center;
-  gap: 8px;
-  /* 与工具栏 gap 保持一致 */
-  padding-left: 2px;
-  margin-left: 0;
+  gap: 6px;
+  width: min(520px, calc(100vw - 48px));
+  padding: 4px 6px;
+  border: 1px solid rgba(125, 211, 252, 0.2);
+  border-radius: 8px;
+  background: rgba(7, 22, 40, 0.42);
+  box-sizing: border-box;
+  transform: translateX(-50%);
+  backdrop-filter: blur(4px);
+}
+
+.playback-group .tool-btn {
+  padding: 5px 9px;
+  border-radius: 7px;
+  font-size: 12px;
+}
+
+.playback-group .custom-select-trigger {
+  padding: 5px 24px 5px 8px;
+  border-radius: 7px;
+  font-size: 12px;
 }
 
 .playback-label {
   color: #dbeafe;
-  font-size: 12px;
+  font-size: 11px;
   white-space: nowrap;
 }
 
-.scenario-label {
+.playback-time {
+  min-width: 36px;
   color: #dbeafe;
-  font-size: 12px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.playback-time--duration {
+  color: #9fb8cf;
+  text-align: left;
+}
+
+.playback-progress {
+  flex: 1;
+  min-width: 140px;
+  height: 16px;
+  margin: 0;
+  accent-color: #38bdf8;
+  cursor: pointer;
+}
+
+.playback-progress:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.playback-progress:focus-visible {
+  outline: 2px solid rgba(125, 211, 252, 0.9);
+  outline-offset: 2px;
 }
 
 .scenario-select {
@@ -1656,6 +1774,11 @@ onBeforeUnmount(() => {
   background: rgba(15, 23, 42, 0.98);
   box-shadow: 0 8px 18px rgba(2, 8, 18, 0.44);
   z-index: 35;
+}
+
+.custom-select-menu--up {
+  top: auto;
+  bottom: calc(100% + 4px);
 }
 
 .custom-select-option {
@@ -1882,15 +2005,40 @@ onBeforeUnmount(() => {
   background: rgba(10, 28, 49, 0.46);
 }
 
+@media (max-width: 1400px) {
+  .tool-bar {
+    top: 78px;
+  }
+
+  .coverage-warning,
+  .aircraft-overview-panel {
+    top: 126px;
+  }
+}
+
 @media (max-width: 900px) {
   .aircraft-overview-panel {
-    top: 112px;
+    top: 126px;
     max-width: min(240px, calc(100vw - 24px));
   }
 
   .entity-info-panel {
-    top: 110px;
-    max-height: calc(100vh - 130px);
+    top: 126px;
+    max-height: calc(100vh - 146px);
+  }
+
+  .toolbar-actions {
+    width: min(100%, calc(100vw - 24px));
+  }
+
+  .playback-group {
+    bottom: 12px;
+    flex-wrap: wrap;
+    width: min(520px, calc(100vw - 24px));
+  }
+
+  .playback-progress {
+    min-width: 120px;
   }
 
   .tool-btn {
