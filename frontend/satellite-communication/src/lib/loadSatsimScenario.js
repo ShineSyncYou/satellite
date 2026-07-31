@@ -107,6 +107,55 @@ function cloneTime(value) {
   return Cesium.JulianDate.clone(value, new Cesium.JulianDate());
 }
 
+/**
+ * 飞机到达终点后位置会保持不变，此时速度朝向无法计算。
+ * 缓存最后一个有效朝向，避免静止阶段模型反复重置或旋转。
+ */
+function createStableAircraftOrientation(position) {
+  const velocityOrientation = new Cesium.VelocityOrientationProperty(position);
+  const beforeTime = new Cesium.JulianDate();
+  const afterTime = new Cesium.JulianDate();
+  const beforePosition = new Cesium.Cartesian3();
+  const currentPosition = new Cesium.Cartesian3();
+  const afterPosition = new Cesium.Cartesian3();
+  let lastOrientation;
+  let lastTime;
+
+  return new Cesium.CallbackProperty((time, result) => {
+    if (lastTime && Cesium.JulianDate.lessThan(time, lastTime)) {
+      lastOrientation = undefined;
+    }
+    lastTime = Cesium.JulianDate.clone(time, lastTime);
+
+    Cesium.JulianDate.addSeconds(time, -1, beforeTime);
+    Cesium.JulianDate.addSeconds(time, 1, afterTime);
+    const before = position.getValue(beforeTime, beforePosition);
+    const current = position.getValue(time, currentPosition);
+    const after = position.getValue(afterTime, afterPosition);
+    const movementStart = before || current;
+    const movementEnd = after || current;
+    const isMoving = movementStart
+      && movementEnd
+      && Cesium.Cartesian3.distanceSquared(movementStart, movementEnd) >= 1;
+
+    if (!isMoving) {
+      return Cesium.defined(lastOrientation)
+        ? Cesium.Quaternion.clone(lastOrientation, result)
+        : undefined;
+    }
+
+    const orientation = velocityOrientation.getValue(time, result);
+    if (Cesium.defined(orientation)) {
+      lastOrientation = Cesium.Quaternion.clone(orientation, lastOrientation);
+      return orientation;
+    }
+
+    return Cesium.defined(lastOrientation)
+      ? Cesium.Quaternion.clone(lastOrientation, result)
+      : undefined;
+  }, false);
+}
+
 function aircraftMinPixelSizeForCamera(viewer, nearPixelSize, farPixelSize) {
   const cameraHeight = Number(viewer?.camera?.positionCartographic?.height);
   if (!Number.isFinite(cameraHeight)) {
@@ -353,8 +402,11 @@ function styleEntities(dataSource, bundle, options) {
       continue;
     }
 
-    if (entity.position && (nodeType === "satellite" || nodeType === "aircraft")) {
+    if (entity.position && nodeType === "satellite") {
       entity.orientation = new Cesium.VelocityOrientationProperty(entity.position);
+    }
+    if (entity.position && nodeType === "aircraft") {
+      entity.orientation = createStableAircraftOrientation(entity.position);
     }
 
     if (nodeType === "satellite") {
