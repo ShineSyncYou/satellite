@@ -19,7 +19,6 @@ frontend/**/dist-ssr/
 frontend/**/coverage/
 frontend/**/.generated-simulations/
 frontend/**/public/cesium/
-frontend/**/public/pictures/
 frontend/**/model-sources/
 frontend/**/docs/
 frontend/**/.env
