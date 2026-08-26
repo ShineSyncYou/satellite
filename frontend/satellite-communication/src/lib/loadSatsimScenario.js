@@ -2313,6 +2313,8 @@ export async function loadSatsimScenario({
   const topologyPolylineCollection = viewer.scene.primitives.add(new Cesium.PolylineCollection());
   const routePolylinePool = [];
   const topologyPolylinePool = [];
+  let topologyLinksVisible = Boolean(showTopologyLinks) && !miniMode;
+  topologyPolylineCollection.show = topologyLinksVisible;
 
   const incrementalState = createIncrementalState(bundle);
   const activeRouteSatelliteIds = new Set();
@@ -2435,6 +2437,29 @@ export async function loadSatsimScenario({
   const onTrackedEntityChanged = (trackedEntity) => syncTrackedSatelliteModel(trackedEntity);
   viewer.trackedEntityChanged.addEventListener(onTrackedEntityChanged);
 
+  const syncTopologyLinksForTime = (time) => {
+    const relativeTime = normalizeRelativeTime(time, bundle.startJulian, bundle.durationSeconds);
+    const topologyState = buildTopologySegments(incrementalState.activeTopology, bundle);
+    if (topologyState.signature !== lastTopologySignature) {
+      syncPolylinePrimitivePool(topologyPolylineCollection, topologyPolylinePool, topologyState.segments, {
+        colorResolver: () => TOPOLOGY_ISL_COLOR.withAlpha(0.16),
+        widthResolver: () => 0.55,
+      });
+      lastTopologySignature = topologyState.signature;
+    }
+    updatePolylinePrimitivePositions(topologyPolylinePool, trackStore, entityLookup, time, relativeTime);
+  };
+
+  const setTopologyLinksVisible = (visible) => {
+    topologyLinksVisible = Boolean(visible) && !miniMode;
+    topologyPolylineCollection.show = topologyLinksVisible;
+    if (topologyLinksVisible) {
+      syncTopologyLinksForTime(viewer.clock.currentTime);
+    }
+    viewer.scene.requestRender();
+    return topologyLinksVisible;
+  };
+
   const updateScene = (time) => {
     // Cesium 在暂停、相机缩放时仍会触发 clock.onTick。
     // 世界坐标只在仿真时刻变化时更新，避免静态场景重复重建点、链路和覆盖。
@@ -2448,7 +2473,7 @@ export async function loadSatsimScenario({
     const coverageTimeRewound = relativeTime + 1e-9 < lastCoverageRelativeTime;
     updateSatellitePointPrimitives(satellitePrimitives.lookup, trackStore, relativeTime);
 
-    const renderTopologyLinks = showTopologyLinks && !miniMode;
+    const renderTopologyLinks = topologyLinksVisible;
     const needsTopologyState = renderTopologyLinks
       || (showCoverage && !miniMode)
       || typeof onSimulationTick === "function";
@@ -2487,16 +2512,10 @@ export async function loadSatsimScenario({
     updatePolylinePrimitivePositions(routePolylinePool, trackStore, entityLookup, time, relativeTime);
 
     if (renderTopologyLinks && (topologyChanged || incrementalState.lastRelativeTime < 1e-9)) {
-      const topologyState = buildTopologySegments(incrementalState.activeTopology, bundle);
-      if (topologyState.signature !== lastTopologySignature) {
-        syncPolylinePrimitivePool(topologyPolylineCollection, topologyPolylinePool, topologyState.segments, {
-          colorResolver: () => TOPOLOGY_ISL_COLOR.withAlpha(0.16),
-          widthResolver: () => 0.55,
-        });
-        lastTopologySignature = topologyState.signature;
-      }
+      syncTopologyLinksForTime(time);
+    } else if (renderTopologyLinks) {
+      updatePolylinePrimitivePositions(topologyPolylinePool, trackStore, entityLookup, time, relativeTime);
     }
-    updatePolylinePrimitivePositions(topologyPolylinePool, trackStore, entityLookup, time, relativeTime);
 
     // 卫星代理、飞机和链路线在每帧更新；只有裁切蜂窝/波束几何按独立频率重建。
     let accessChanged = false;
@@ -2564,6 +2583,7 @@ export async function loadSatsimScenario({
     entityLookup,
     coverageAvailable: Boolean(beamConfig),
     coverageWarning: beamConfig ? "" : "场景缺少波束参数，请重新生成。",
+    setTopologyLinksVisible,
     cleanup() {
       viewer.clock.onTick.removeEventListener(onTick);
       viewer.scene.preUpdate.removeEventListener(onScenePreUpdate);

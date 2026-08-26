@@ -607,6 +607,23 @@ async function getTask(taskId) {
   return loadPersistedTask(taskId);
 }
 
+function isFiniteCoordinateInRange(value, min, max) {
+  if (value == null || value === "") {
+    return false;
+  }
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric >= min && numeric <= max;
+}
+
+function assertValidGroundStationCoordinate(manifest) {
+  if (!isFiniteCoordinateInRange(manifest?.groundStation?.lat, -90, 90)) {
+    throw new Error("Manifest must contain a ground station latitude between -90 and 90.");
+  }
+  if (!isFiniteCoordinateInRange(manifest?.groundStation?.lon, -180, 180)) {
+    throw new Error("Manifest must contain a ground station longitude between -180 and 180.");
+  }
+}
+
 function buildSampleConfig(manifest) {
   const preview = manifest?.sampleConfigPreview;
   if (!preview || typeof preview !== "object") {
@@ -618,9 +635,7 @@ function buildSampleConfig(manifest) {
   if (!Array.isArray(manifest?.aircraftRoutes) || manifest.aircraftRoutes.length === 0) {
     throw new Error("Manifest must contain at least one aircraft route.");
   }
-  if (manifest?.groundStation?.lat == null || manifest?.groundStation?.lon == null) {
-    throw new Error("Manifest must contain a valid ground station coordinate.");
-  }
+  assertValidGroundStationCoordinate(manifest);
 
   return {
     ...preview,
@@ -819,6 +834,12 @@ async function handleCreateTask(req, res) {
   const manifest = payload?.manifest;
   if (!manifest || typeof manifest !== "object") {
     badRequest(res, "manifest is required.");
+    return;
+  }
+  try {
+    assertValidGroundStationCoordinate(manifest);
+  } catch (error) {
+    badRequest(res, serializeError(error));
     return;
   }
 

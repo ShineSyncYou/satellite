@@ -4,7 +4,18 @@
       <div ref="containerRef" class="wizard-map-canvas"></div>
       <div class="wizard-map-toolbar">
         <button class="wizard-map-toolbar__button" type="button" @click="resetToChinaView">
-          回到中国视图
+          中国视图
+        </button>
+        <button class="wizard-map-toolbar__button" type="button" @click="resetToGlobalView">
+          全球视图
+        </button>
+        <button
+          class="wizard-map-toolbar__button"
+          type="button"
+          :disabled="!hasLocatableMarker"
+          @click="focusCurrentMarker"
+        >
+          定位当前站点
         </button>
       </div>
     </div>
@@ -56,21 +67,23 @@ const containerStyle = computed(() => ({
 
 let viewer = null;
 let clickHandler = null;
-let moveEndCleanup = null;
 let wheelCleanup = null;
 
 const CHINA_VIEW_RECTANGLE = Cesium.Rectangle.fromDegrees(58, 2, 150, 64);
-const CHINA_ALLOWED_RECTANGLE = Cesium.Rectangle.fromDegrees(52, -4, 156, 68);
-const CHINA_CLICK_BOUNDS = {
-  west: 73,
-  east: 136,
-  south: 16,
-  north: 55,
-};
+const GLOBAL_VIEW_RECTANGLE = Cesium.Rectangle.fromDegrees(-180, -80, 180, 80);
+const hasLocatableMarker = computed(() => props.markers.some((marker) => (
+  Number.isFinite(Number(marker?.lat))
+  && Number.isFinite(Number(marker?.lon))
+  && Number(marker.lat) >= -90
+  && Number(marker.lat) <= 90
+  && Number(marker.lon) >= -180
+  && Number(marker.lon) <= 180
+)));
 
 async function addImagery(targetViewer) {
+  targetViewer.imageryLayers.removeAll(true);
+
   try {
-    targetViewer.imageryLayers.removeAll(true);
     const imageryLayer = new Cesium.UrlTemplateImageryProvider({
       url: "https://webst0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=6&x={x}&y={y}&z={z}",
       subdomains: ["1", "2", "3", "4"],
@@ -84,10 +97,10 @@ async function addImagery(targetViewer) {
     targetViewer.imageryLayers.addImageryProvider(imageryLayer);
     targetViewer.imageryLayers.addImageryProvider(annotationLayer);
   } catch (error) {
-    const fallback = await Cesium.TileMapServiceImageryProvider.fromUrl(
+    const fallbackLayer = await Cesium.TileMapServiceImageryProvider.fromUrl(
       Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"),
     );
-    targetViewer.imageryLayers.addImageryProvider(fallback);
+    targetViewer.imageryLayers.addImageryProvider(fallbackLayer);
     console.warn("任务地图加载高德底图失败，已回退到 NaturalEarthII。", error);
   }
   targetViewer.scene.requestRender();
@@ -98,49 +111,45 @@ function resetToChinaView() {
     return;
   }
 
-  // 选点地图固定使用中国区域的二维视图，避免在小尺寸组件里旋转地球导致难以操作。
+  // 初始仍展示中国区域，用户可通过工具栏切换至全球视图。
   viewer.camera.flyTo({
     destination: CHINA_VIEW_RECTANGLE,
     duration: 0.45,
   });
 }
 
-function isWithinChinaBounds(lat, lon) {
-  return lat >= CHINA_CLICK_BOUNDS.south
-    && lat <= CHINA_CLICK_BOUNDS.north
-    && lon >= CHINA_CLICK_BOUNDS.west
-    && lon <= CHINA_CLICK_BOUNDS.east;
-}
-
-function isViewOutsideAllowedBounds(rectangle) {
-  if (!rectangle) {
-    return false;
+function resetToGlobalView() {
+  if (!viewer || viewer.isDestroyed()) {
+    return;
   }
 
-  return rectangle.west < CHINA_ALLOWED_RECTANGLE.west
-    || rectangle.east > CHINA_ALLOWED_RECTANGLE.east
-    || rectangle.south < CHINA_ALLOWED_RECTANGLE.south
-    || rectangle.north > CHINA_ALLOWED_RECTANGLE.north;
+  viewer.camera.flyTo({
+    destination: GLOBAL_VIEW_RECTANGLE,
+    duration: 0.45,
+  });
 }
 
-function bindCameraGuard(targetViewer) {
-  const handleMoveEnd = () => {
-    if (!targetViewer || targetViewer.isDestroyed()) {
-      return;
-    }
+function focusCurrentMarker() {
+  if (!viewer || viewer.isDestroyed()) {
+    return;
+  }
 
-    const viewRectangle = targetViewer.camera.computeViewRectangle(targetViewer.scene.globe.ellipsoid);
-    if (!isViewOutsideAllowedBounds(viewRectangle)) {
-      return;
-    }
+  const marker = props.markers.find((item) => (
+    Number.isFinite(Number(item?.lat))
+    && Number.isFinite(Number(item?.lon))
+    && Number(item.lat) >= -90
+    && Number(item.lat) <= 90
+    && Number(item.lon) >= -180
+    && Number(item.lon) <= 180
+  ));
+  if (!marker) {
+    return;
+  }
 
-    resetToChinaView();
-  };
-
-  targetViewer.camera.moveEnd.addEventListener(handleMoveEnd);
-  moveEndCleanup = () => {
-    targetViewer.camera.moveEnd.removeEventListener(handleMoveEnd);
-  };
+  viewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromDegrees(Number(marker.lon), Number(marker.lat), 2500000),
+    duration: 0.45,
+  });
 }
 
 function bindWheelZoom(targetViewer) {
@@ -190,7 +199,7 @@ function configureScene(targetViewer) {
   controller.enableCollisionDetection = false;
   controller.enableZoom = false;
   controller.minimumZoomDistance = 700000;
-  controller.maximumZoomDistance = 12000000;
+  controller.maximumZoomDistance = 50000000;
 }
 
 function syncGraphics() {
@@ -251,12 +260,8 @@ function handleLeftClick(event) {
   }
   const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
   const lat = Cesium.Math.toDegrees(cartographic.latitude);
-  const lon = Cesium.Math.toDegrees(cartographic.longitude);
-
-  if (!isWithinChinaBounds(lat, lon)) {
-    resetToChinaView();
-    return;
-  }
+  const rawLon = Cesium.Math.toDegrees(cartographic.longitude);
+  const lon = ((((rawLon + 180) % 360) + 360) % 360) - 180;
 
   emit("map-click", {
     lat,
@@ -296,7 +301,6 @@ function initViewer() {
 
   addImagery(viewer);
   resetToChinaView();
-  bindCameraGuard(viewer);
   bindWheelZoom(viewer);
 
   clickHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
@@ -308,10 +312,6 @@ function destroyViewer() {
   if (wheelCleanup) {
     wheelCleanup();
     wheelCleanup = null;
-  }
-  if (moveEndCleanup) {
-    moveEndCleanup();
-    moveEndCleanup = null;
   }
   if (clickHandler) {
     clickHandler.destroy();
@@ -356,6 +356,10 @@ onBeforeUnmount(() => {
   top: 14px;
   right: 14px;
   z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .wizard-map-toolbar__button {
@@ -375,5 +379,11 @@ onBeforeUnmount(() => {
   background: rgba(13, 34, 54, 0.92);
   border-color: rgba(116, 193, 255, 0.58);
   transform: translateY(-1px);
+}
+
+.wizard-map-toolbar__button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
 }
 </style>

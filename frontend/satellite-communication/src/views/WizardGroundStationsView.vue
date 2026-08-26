@@ -4,17 +4,17 @@
       <div class="page-section__head">
         <div>
           <p class="page-eyebrow">地面站配置</p>
-          <h1 class="page-title">步骤 3 · 地面站点选与天气预设</h1>
-          <p class="page-subtitle">首版只允许创建 1 个地面站，在中国区域平面地图上点击位置后补充名称与高度，同时选择天气预设写入任务清单。</p>
+          <h1 class="page-title">步骤 3 · 地面站位置与天气预设</h1>
+          <p class="page-subtitle">当前任务创建 1 个地面站，可选择现实站点预设、直接输入全球经纬度或在地图上点选位置。</p>
         </div>
       </div>
 
       <div class="form-grid two-up wizard-map-layout">
         <div class="v2-helper-card stack-gap wizard-map-card">
-          <h3>地面站点选地图（中国区域平面视图）</h3>
+          <h3>地面站位置地图</h3>
           <WizardCesiumMap
             :height="430"
-            :hint="'请在中国区域点击一个地面站位置，重复点击会覆盖 GS_1 的坐标。'"
+            :hint="'可在全球范围点选位置；重复点击会覆盖 GS_1 的坐标。'"
             :markers="groundStationMarker"
             @map-click="onMapClick"
           />
@@ -22,6 +22,23 @@
 
         <div class="v2-helper-card stack-gap wizard-status-card">
           <h3>GS_1 参数</h3>
+
+          <label class="v2-field">
+            <span>现实地面站预设</span>
+            <select v-model="selectedPresetKey" name="groundStationPreset" @change="onPresetChange">
+              <option value="">自定义位置</option>
+              <option
+                v-for="preset in GROUND_STATION_PRESET_OPTIONS"
+                :key="preset.key"
+                :value="preset.key"
+              >
+                {{ preset.name }}
+              </option>
+            </select>
+          </label>
+          <p class="station-preset-note">
+            坐标来自公开资料，仅供仿真参考；选择预设后仍可继续编辑。
+          </p>
 
           <label class="v2-field">
             <span>地面站名称</span>
@@ -34,14 +51,34 @@
           </label>
 
           <div class="station-coordinate-grid">
-            <div class="station-coordinate-card">
-              <span class="station-coordinate-card__label"><span aria-hidden="true">◉</span> 纬度</span>
-              <strong>{{ stationLatDisplay }}</strong>
-            </div>
-            <div class="station-coordinate-card">
-              <span class="station-coordinate-card__label"><span aria-hidden="true">◌</span> 经度</span>
-              <strong>{{ stationLonDisplay }}</strong>
-            </div>
+            <label class="v2-field">
+              <span>纬度（-90～90°）</span>
+              <input
+                v-model.number="stationLat"
+                name="groundStationLatitude"
+                type="number"
+                min="-90"
+                max="90"
+                step="0.000001"
+                placeholder="例如：40.451000"
+                @input="onCoordinateInput"
+              />
+              <small>{{ stationLatDisplay }}</small>
+            </label>
+            <label class="v2-field">
+              <span>经度（-180～180°）</span>
+              <input
+                v-model.number="stationLon"
+                name="groundStationLongitude"
+                type="number"
+                min="-180"
+                max="180"
+                step="0.000001"
+                placeholder="例如：116.860000"
+                @input="onCoordinateInput"
+              />
+              <small>{{ stationLonDisplay }}</small>
+            </label>
           </div>
 
           <div class="weather-preset-section">
@@ -80,6 +117,10 @@ import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import ProductScaffold from "../components/layout/ProductScaffold.vue";
 import WizardCesiumMap from "../components/task/WizardCesiumMap.vue";
+import {
+  GROUND_STATION_PRESET_OPTIONS,
+  getGroundStationPresetByKey,
+} from "../lib/groundStationCatalog";
 import { formatCoordinate, WEATHER_PRESET_OPTIONS } from "../lib/wizardScenarioBuilder";
 import { DEFAULT_GROUND_STATION_ALT_KM, getWizardDraft, updateWizardDraft } from "../lib/wizardDraft";
 
@@ -92,14 +133,39 @@ const stationAltKm = ref(Number(draft.groundStation?.alt_km ?? DEFAULT_GROUND_ST
 const weatherPreset = ref(draft.environmentParams?.weatherPreset || "clear");
 const errorText = ref("");
 
+function roundCoordinate(value) {
+  return Number(Number(value).toFixed(6));
+}
+
+function isValidCoordinate(value, min, max) {
+  if (value == null || value === "") {
+    return false;
+  }
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric >= min && numeric <= max;
+}
+
+function matchesPreset(preset, lat, lon) {
+  return isValidCoordinate(lat, -90, 90)
+    && isValidCoordinate(lon, -180, 180)
+    && roundCoordinate(lat) === roundCoordinate(preset.lat)
+    && roundCoordinate(lon) === roundCoordinate(preset.lon);
+}
+
+const initialPreset = GROUND_STATION_PRESET_OPTIONS.find((preset) => (
+  matchesPreset(preset, stationLat.value, stationLon.value)
+));
+const selectedPresetKey = ref(initialPreset?.key || "");
+
 const groundStationMarker = computed(() => (
-  stationLat.value == null || stationLon.value == null
+  !isValidCoordinate(stationLat.value, -90, 90)
+    || !isValidCoordinate(stationLon.value, -180, 180)
     ? []
     : [{
         id: "GS_1",
         label: "GS_1",
-        lat: stationLat.value,
-        lon: stationLon.value,
+        lat: Number(stationLat.value),
+        lon: Number(stationLon.value),
         altKm: stationAltKm.value,
         color: "#ff8c69",
         pixelSize: 12,
@@ -118,14 +184,35 @@ const stationLonDisplay = computed(() => (
 
 function onMapClick(position) {
   errorText.value = "";
-  stationLat.value = position.lat;
-  stationLon.value = position.lon;
+  selectedPresetKey.value = "";
+  stationLat.value = roundCoordinate(position.lat);
+  stationLon.value = roundCoordinate(position.lon);
+}
+
+function onCoordinateInput() {
+  errorText.value = "";
+  selectedPresetKey.value = "";
+}
+
+function onPresetChange() {
+  errorText.value = "";
+  const preset = getGroundStationPresetByKey(selectedPresetKey.value);
+  if (!preset) {
+    return;
+  }
+  stationName.value = preset.name;
+  stationLat.value = roundCoordinate(preset.lat);
+  stationLon.value = roundCoordinate(preset.lon);
 }
 
 function goNext() {
   errorText.value = "";
-  if (stationLat.value == null || stationLon.value == null) {
-    errorText.value = "请先在地图上点击生成 GS_1 的位置。";
+  if (!isValidCoordinate(stationLat.value, -90, 90)) {
+    errorText.value = "请输入 -90～90 之间的有效纬度。";
+    return;
+  }
+  if (!isValidCoordinate(stationLon.value, -180, 180)) {
+    errorText.value = "请输入 -180～180 之间的有效经度。";
     return;
   }
   if (!stationName.value.trim()) {
@@ -137,8 +224,8 @@ function goNext() {
     groundStation: {
       id: "GS_1",
       name: stationName.value.trim(),
-      lat: stationLat.value,
-      lon: stationLon.value,
+      lat: roundCoordinate(stationLat.value),
+      lon: roundCoordinate(stationLon.value),
       alt_km: Number(stationAltKm.value || DEFAULT_GROUND_STATION_ALT_KM),
     },
     environmentParams: {
@@ -171,34 +258,22 @@ function goNext() {
   gap: 12px;
 }
 
-.station-coordinate-card,
 .weather-preset-card {
   border: 1px solid var(--v2-border);
   border-radius: 14px;
   background: rgba(5, 20, 36, 0.68);
 }
 
-.station-coordinate-card {
-  display: grid;
-  gap: 6px;
-  padding: 14px 16px;
-}
-
-.station-coordinate-card__label {
+.station-preset-note {
+  margin: -8px 0 0;
   color: var(--v2-text-muted);
   font-size: 12px;
-  letter-spacing: 0.1em;
-  font-weight: 700;
+  line-height: 1.6;
 }
 
-.station-coordinate-card__label span {
-  color: var(--v2-primary);
-  margin-right: 6px;
-}
-
-.station-coordinate-card strong {
-  color: var(--v2-text);
-  font-size: 20px;
+.station-coordinate-grid .v2-field small {
+  color: var(--v2-text-muted);
+  font-size: 12px;
 }
 
 .weather-preset-section {

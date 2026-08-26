@@ -17,6 +17,18 @@
         <button class="tool-btn" :disabled="isScenarioSwitching" @click="goBackToLanding">返回首页</button>
         <button class="tool-btn" :disabled="isScenarioSwitching" @click="flyToChina">中国居中</button>
         <button class="tool-btn" :disabled="isScenarioSwitching" @click="openMetricsScreen">打开参数副屏</button>
+        <button
+          type="button"
+          class="tool-btn topology-toggle-btn"
+          :class="{ active: topologyLinksVisible }"
+          :disabled="isScenarioSwitching || sceneLoading || sceneEmpty"
+          :aria-pressed="topologyLinksVisible"
+          :title="topologyLinksVisible ? '隐藏灰色星间拓扑线' : '显示灰色星间拓扑线'"
+          @click="toggleTopologyLinks"
+        >
+          <span class="topology-toggle-indicator" aria-hidden="true"></span>
+          <span>星间拓扑线</span>
+        </button>
       </div>
     </div>
 
@@ -223,6 +235,7 @@ const selectedScenario = ref(typeof route.query.scenario === "string" ? route.qu
 const isScenarioSwitching = ref(false);                               // 场景切换中的锁定状态
 const playbackMultiplier = ref(DEFAULT_PLAYBACK_MULTIPLIER);
 const playbackPaused = ref(false);
+const topologyLinksVisible = ref(true);
 const selectedEntityInfo = ref(null);                                 // 左侧实体详情面板
 const selectedEntityId = ref("");                                     // 当前选中实体 ID
 const aircraftRoutes = ref([]);
@@ -699,6 +712,13 @@ function togglePlaybackPause() {
   if (isScenarioSwitching.value) return;
   playbackPaused.value = !playbackPaused.value;
   applyPlaybackToViewers();
+}
+
+function toggleTopologyLinks() {
+  if (isScenarioSwitching.value || sceneLoading.value || sceneEmpty.value) return;
+  const nextVisible = !topologyLinksVisible.value;
+  const appliedVisible = mainScenarioHandle?.setTopologyLinksVisible?.(nextVisible);
+  topologyLinksVisible.value = typeof appliedVisible === "boolean" ? appliedVisible : nextVisible;
 }
 
 function onPlaybackProgressInput(event) {
@@ -1290,8 +1310,7 @@ async function initializeMainScene() {
     satelliteModelPoolEnabled: false,
     maxAircraft: 10,
     maxGroundStations: 1,
-    // 主屏只显示有效端到端路由，不再绘制与业务接入无关的全网 ISL 背景。
-    showTopologyLinks: false,
+    showTopologyLinks: topologyLinksVisible.value,
     playbackMultiplier: playbackMultiplier.value,
     onSimulationTick: ({ relativeTimeS, activeTopology, activeRoutes }) => {
       latestRelativeTimeS = Number(relativeTimeS) || 0;
@@ -1816,6 +1835,51 @@ onBeforeUnmount(() => {
 
 .tool-btn:hover {
   background: rgba(30, 41, 59, 0.86);
+}
+
+.topology-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.topology-toggle-btn.active {
+  border-color: rgba(94, 234, 212, 0.72);
+  background: rgba(13, 91, 92, 0.72);
+  color: #ecfeff;
+}
+
+.topology-toggle-indicator {
+  position: relative;
+  width: 24px;
+  height: 14px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.82);
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.topology-toggle-indicator::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+  transition: transform 160ms ease, background-color 160ms ease;
+}
+
+.topology-toggle-btn.active .topology-toggle-indicator {
+  border-color: rgba(94, 234, 212, 0.88);
+  background: rgba(20, 184, 166, 0.3);
+}
+
+.topology-toggle-btn.active .topology-toggle-indicator::after {
+  background: #5eead4;
+  transform: translateX(10px);
 }
 
 .tool-btn:disabled {
