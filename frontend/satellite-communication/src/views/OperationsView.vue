@@ -213,6 +213,7 @@ import {
   bindAmapImageryFallback,
   bindGlobeImageryNetworkSync,
 } from "../lib/offlineImagery.js";
+import { attachWorldCapitalLabels } from "../lib/worldCapitalLabels.js";
 import { openMetricsScreenWindow } from "../lib/openScreenWindow";
 import "../Widgets/widgets.css";
 
@@ -269,6 +270,7 @@ let removeAutoRotate = null;                                          // 地球�
 let removeCameraHeightDisplay = null;
 let removeImageryNetworkSync = null;
 let removeImageryFallback = null;
+let removeCapitalLabels = null;
 let removeScreenSyncTick = null;                                      // 屏幕同步销毁函数
 let lastRotateTime = null;                                            // 上次自转计算时刻
 let mainScenarioHandle = null;                                        // 主屏场景加载句柄
@@ -819,6 +821,7 @@ function createViewer() {
 
   viewer.scene.backgroundColor = Cesium.Color.BLACK;
   bindCameraHeightDisplay();
+  removeCapitalLabels = attachWorldCapitalLabels(viewer);
 
   void applyGlobeImageryLayers(viewer).then(() => {
     if (!viewer || viewer.isDestroyed()) {
@@ -1242,6 +1245,10 @@ function destroyAllScenes() {
   if (removeImageryFallback) {
     removeImageryFallback();
     removeImageryFallback = null;
+  }
+  if (removeCapitalLabels) {
+    removeCapitalLabels();
+    removeCapitalLabels = null;
   }
   unbindScreenSyncTick();
   unbindEntityPickHandler();

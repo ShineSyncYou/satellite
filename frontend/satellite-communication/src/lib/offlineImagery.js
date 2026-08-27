@@ -1,7 +1,12 @@
 import * as Cesium from "cesium";
 
 export const OFFLINE_IMAGERY_MAX_LEVEL = 6;
+export const AMAP_GLOBAL_IMAGERY_MAX_LEVEL = 7;
+export const AMAP_CHINA_IMAGERY_MAX_LEVEL = 18;
 export const AMAP_ANNOTATION_MAX_LEVEL = 8;
+
+// 高等级卫星影像仅覆盖中国区域；全球层在实测稳定的 7 级停止后由 Cesium 放大父瓦片。
+const AMAP_CHINA_HIGH_RES_RECTANGLE = Cesium.Rectangle.fromDegrees(72, 16, 138, 55);
 
 const AMAP_PROBE_URLS = [
   "https://webst01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=6&x=1&y=1&z=1",
@@ -11,7 +16,7 @@ const AMAP_PROBE_TIMEOUT_MS = 5000;
 
 const OFFLINE_DAY_TILE_URL = import.meta.env.VITE_OFFLINE_DAY_TILE_URL;
 
-/** @type {WeakMap<Cesium.Viewer, { offline: Cesium.ImageryLayer | null, amapBase: Cesium.ImageryLayer | null, amapAnno: Cesium.ImageryLayer | null }>} */
+/** @type {WeakMap<Cesium.Viewer, { offline: Cesium.ImageryLayer | null, amapGlobalBase: Cesium.ImageryLayer | null, amapChinaBase: Cesium.ImageryLayer | null, amapAnno: Cesium.ImageryLayer | null }>} */
 const viewerImageryState = new WeakMap();
 
 let lastAmapReachable = null;
@@ -23,7 +28,12 @@ export function isOfflineImageryEnabled() {
 
 function getImageryState(viewer) {
   if (!viewerImageryState.has(viewer)) {
-    viewerImageryState.set(viewer, { offline: null, amapBase: null, amapAnno: null });
+    viewerImageryState.set(viewer, {
+      offline: null,
+      amapGlobalBase: null,
+      amapChinaBase: null,
+      amapAnno: null,
+    });
   }
   return viewerImageryState.get(viewer);
 }
@@ -37,11 +47,12 @@ export function createOfflineImageryProvider() {
   });
 }
 
-function createAmapBaseProvider() {
+function createAmapBaseProvider({ maximumLevel, rectangle } = {}) {
   return new Cesium.UrlTemplateImageryProvider({
     url: "https://webst0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=6&x={x}&y={y}&z={z}",
     subdomains: ["1", "2", "3", "4"],
-    maximumLevel: 18,
+    maximumLevel,
+    ...(rectangle ? { rectangle } : {}),
   });
 }
 
@@ -50,6 +61,8 @@ function createAmapAnnotationProvider() {
     url: "https://wprd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}&scl=1&ltype=4",
     subdomains: ["1", "2", "3", "4"],
     maximumLevel: AMAP_ANNOTATION_MAX_LEVEL,
+    // 高德文字与图标已经烘焙进标注瓦片，按中国范围限制整层，避免国外灰色地名干扰首都层。
+    rectangle: AMAP_CHINA_HIGH_RES_RECTANGLE,
   });
 }
 
@@ -118,10 +131,17 @@ function ensureOfflineLayer(viewer) {
 
 function ensureAmapLayers(viewer) {
   const state = getImageryState(viewer);
-  if (!state.amapBase) {
-    state.amapBase = viewer.imageryLayers.addImageryProvider(createAmapBaseProvider());
+  if (!state.amapGlobalBase) {
+    state.amapGlobalBase = viewer.imageryLayers.addImageryProvider(createAmapBaseProvider({
+      maximumLevel: AMAP_GLOBAL_IMAGERY_MAX_LEVEL,
+    }));
+    state.amapChinaBase = viewer.imageryLayers.addImageryProvider(createAmapBaseProvider({
+      maximumLevel: AMAP_CHINA_IMAGERY_MAX_LEVEL,
+      rectangle: AMAP_CHINA_HIGH_RES_RECTANGLE,
+    }));
     state.amapAnno = viewer.imageryLayers.addImageryProvider(createAmapAnnotationProvider());
-    state.amapBase.show = false;
+    state.amapGlobalBase.show = false;
+    state.amapChinaBase.show = false;
     state.amapAnno.show = false;
   }
   return state;
@@ -136,12 +156,14 @@ function setLayerVisible(layer, visible) {
 function showAmapOnly(viewer, offline, state) {
   ensureAmapLayers(viewer);
   setLayerVisible(offline, false);
-  setLayerVisible(state.amapBase, true);
+  setLayerVisible(state.amapGlobalBase, true);
+  setLayerVisible(state.amapChinaBase, true);
   setLayerVisible(state.amapAnno, true);
 }
 
 function showOfflineOnly(viewer, offline, state) {
-  setLayerVisible(state.amapBase, false);
+  setLayerVisible(state.amapGlobalBase, false);
+  setLayerVisible(state.amapChinaBase, false);
   setLayerVisible(state.amapAnno, false);
   setLayerVisible(offline, true);
 }
@@ -159,11 +181,14 @@ export async function applyGlobeImageryLayers(viewer) {
     const state = getImageryState(viewer);
     viewer.imageryLayers.removeAll(true);
     state.offline = null;
-    state.amapBase = null;
+    state.amapGlobalBase = null;
+    state.amapChinaBase = null;
     state.amapAnno = null;
     ensureAmapLayers(viewer);
-    setLayerVisible(getImageryState(viewer).amapBase, true);
-    setLayerVisible(getImageryState(viewer).amapAnno, true);
+    const onlineState = getImageryState(viewer);
+    setLayerVisible(onlineState.amapGlobalBase, true);
+    setLayerVisible(onlineState.amapChinaBase, true);
+    setLayerVisible(onlineState.amapAnno, true);
     viewer.scene.requestRender();
     return (await canReachAmapImagery()) ? "online" : "none";
   }
@@ -194,7 +219,7 @@ export function bindAmapImageryFallback(viewer) {
 
   let errorCount = 0;
   const onError = () => {
-    if (!viewer || viewer.isDestroyed() || !state.amapBase?.show) {
+    if (!viewer || viewer.isDestroyed() || !state.amapGlobalBase?.show) {
       return;
     }
     errorCount += 1;
@@ -207,15 +232,18 @@ export function bindAmapImageryFallback(viewer) {
     viewer.scene.requestRender();
   };
 
-  state.amapBase.imageryProvider.errorEvent.addEventListener(onError);
-  if (state.amapAnno) {
-    state.amapAnno.imageryProvider.errorEvent.addEventListener(onError);
+  const monitoredProviders = [state.amapGlobalBase, state.amapChinaBase, state.amapAnno]
+    .filter(Boolean)
+    .map((layer) => layer.imageryProvider);
+  for (const provider of monitoredProviders) {
+    provider.errorEvent.addEventListener(onError);
   }
 
   return () => {
     errorCount = 0;
-    state.amapBase?.imageryProvider.errorEvent.removeEventListener(onError);
-    state.amapAnno?.imageryProvider.errorEvent.removeEventListener(onError);
+    for (const provider of monitoredProviders) {
+      provider.errorEvent.removeEventListener(onError);
+    }
   };
 }
 
