@@ -46,16 +46,16 @@
       <div class="bandwidth-preview-layout">
         <div class="bandwidth-grid">
           <label class="v2-field">
-            <span>地空链路带宽（Mbps）</span>
-            <input v-model.number="bwGslMbps" name="bwGslMbps" type="number" min="1" step="1" />
+            <span>LEO 地空链路带宽（Mbps）</span>
+            <input v-model.number="bwLeoGslMbps" name="bwLeoGslMbps" type="number" min="1" step="1" />
           </label>
           <label class="v2-field">
             <span>星间链路带宽（Mbps）</span>
             <input v-model.number="bwIslMbps" name="bwIslMbps" type="number" min="1" step="1" />
           </label>
           <label class="v2-field">
-            <span>星上总线带宽（Mbps）</span>
-            <input v-model.number="intraSatelliteBusMbps" name="intraSatelliteBusMbps" type="number" min="1" step="10" />
+            <span>GEO 地空链路带宽（Mbps）</span>
+            <input v-model.number="bwGeoGslMbps" name="bwGeoGslMbps" type="number" min="1" step="1" />
           </label>
         </div>
         <div class="v2-helper-card stack-gap">
@@ -118,9 +118,9 @@ const speedMultiplier = ref(Number(draft.simulationParams?.simulationSpeedMultip
 const timeStepSeconds = ref(Number(draft.simulationParams?.timeStepSeconds || 30));
 const satAntennaAngleDeg = ref(Number(draft.communicationParams?.satAntennaAngleDeg || 25));
 const geoSatAntennaAngleDeg = ref(Number(draft.communicationParams?.geoSatAntennaAngleDeg || 8));
-const bwGslMbps = ref(Number(draft.communicationParams?.bwGslMbps || 150));
-const bwIslMbps = ref(Number(draft.communicationParams?.bwIslMbps || 500));
-const intraSatelliteBusMbps = ref(Number(draft.communicationParams?.intraSatelliteBusMbps || 800));
+const bwLeoGslMbps = ref(Number(draft.communicationParams?.bwLeoGslMbps || 150));
+const bwIslMbps = ref(Number(draft.communicationParams?.bwIslMbps || 200));
+const bwGeoGslMbps = ref(Number(draft.communicationParams?.bwGeoGslMbps || 400));
 const submitting = ref(false);
 const errorText = ref("");
 
@@ -136,9 +136,9 @@ const previewDraft = computed(() => ({
     ...draft.communicationParams,
     satAntennaAngleDeg: satAntennaAngleDeg.value,
     geoSatAntennaAngleDeg: geoSatAntennaAngleDeg.value,
-    bwGslMbps: bwGslMbps.value,
+    bwLeoGslMbps: bwLeoGslMbps.value,
     bwIslMbps: bwIslMbps.value,
-    intraSatelliteBusMbps: intraSatelliteBusMbps.value,
+    bwGeoGslMbps: bwGeoGslMbps.value,
   },
 }));
 const previewManifest = computed(() => buildWizardManifest(previewDraft.value));
@@ -179,9 +179,9 @@ async function submitManifest() {
       communicationParams: {
         satAntennaAngleDeg: satAntennaAngleDeg.value,
         geoSatAntennaAngleDeg: geoSatAntennaAngleDeg.value,
-        bwGslMbps: bwGslMbps.value,
+        bwLeoGslMbps: bwLeoGslMbps.value,
         bwIslMbps: bwIslMbps.value,
-        intraSatelliteBusMbps: intraSatelliteBusMbps.value,
+        bwGeoGslMbps: bwGeoGslMbps.value,
       },
     });
     const manifest = buildWizardManifest(nextDraft);

@@ -44,9 +44,9 @@ function defaultDraft() {
     communicationParams: {
       satAntennaAngleDeg: 25.0,
       geoSatAntennaAngleDeg: 8.0,
-      bwGslMbps: 150.0,
-      bwIslMbps: 500.0,
-      intraSatelliteBusMbps: 800.0,
+      bwLeoGslMbps: 150.0,
+      bwIslMbps: 200.0,
+      bwGeoGslMbps: 400.0,
     },
     environmentParams: {
       weatherPreset: "clear",
@@ -57,6 +57,19 @@ function defaultDraft() {
 function mergeDraft(loadedDraft) {
   const base = defaultDraft();
   const next = loadedDraft || {};
+  const nextCommunicationParams = next.communicationParams || {};
+  const legacyGeoGslMbps = nextCommunicationParams.intraSatelliteBusMbps;
+  const communicationParams = {
+    ...base.communicationParams,
+    ...nextCommunicationParams,
+    ...(
+      nextCommunicationParams.bwGeoGslMbps == null && legacyGeoGslMbps != null
+        ? { bwGeoGslMbps: legacyGeoGslMbps }
+        : {}
+    ),
+  };
+  delete communicationParams.intraSatelliteBusMbps;
+
   return {
     ...base,
     ...next,
@@ -79,8 +92,7 @@ function mergeDraft(loadedDraft) {
       ...(next.simulationParams || {}),
     },
     communicationParams: {
-      ...base.communicationParams,
-      ...(next.communicationParams || {}),
+      ...communicationParams,
     },
     environmentParams: {
       ...base.environmentParams,

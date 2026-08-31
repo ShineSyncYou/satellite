@@ -470,8 +470,9 @@ export function buildSampleConfigPreview(draft) {
     ground_stations: buildGroundStationPreview(draft.groundStation),
     sat_antenna_angle: roundTo(draft.communicationParams?.satAntennaAngleDeg ?? 25, 3),
     geo_sat_antenna_angle: roundTo(draft.communicationParams?.geoSatAntennaAngleDeg ?? 8, 3),
-    bw_gsl: roundTo(draft.communicationParams?.bwGslMbps ?? 150, 3),
-    bw_isl: roundTo(draft.communicationParams?.bwIslMbps ?? 500, 3),
+    bw_gsl: roundTo(draft.communicationParams?.bwLeoGslMbps ?? 150, 3),
+    bw_isl: roundTo(draft.communicationParams?.bwIslMbps ?? 200, 3),
+    bw_geo_gsl: roundTo(draft.communicationParams?.bwGeoGslMbps ?? 400, 3),
     rain_fade_intensity: weatherMeta.rainFadeIntensity,
     traffic_demands: buildTrafficDemands(aircraftRoutes, draft.groundStation?.id || "GS_1"),
   };
@@ -523,9 +524,9 @@ export function buildWizardManifest(draft) {
     communicationParams: {
       satAntennaAngleDeg: roundTo(draft.communicationParams?.satAntennaAngleDeg ?? 25, 3),
       geoSatAntennaAngleDeg: roundTo(draft.communicationParams?.geoSatAntennaAngleDeg ?? 8, 3),
-      bwGslMbps: roundTo(draft.communicationParams?.bwGslMbps ?? 150, 3),
-      bwIslMbps: roundTo(draft.communicationParams?.bwIslMbps ?? 500, 3),
-      intraSatelliteBusMbps: roundTo(draft.communicationParams?.intraSatelliteBusMbps ?? 800, 3),
+      bwLeoGslMbps: roundTo(draft.communicationParams?.bwLeoGslMbps ?? 150, 3),
+      bwIslMbps: roundTo(draft.communicationParams?.bwIslMbps ?? 200, 3),
+      bwGeoGslMbps: roundTo(draft.communicationParams?.bwGeoGslMbps ?? 400, 3),
     },
     environmentParams: {
       weatherPreset: weatherMeta.key,

@@ -150,10 +150,6 @@
           <span class="entity-stat-value">{{ selectedEntityInfo.txRateText }}</span>
         </div>
         <div class="entity-stat-card">
-          <span class="entity-stat-label">链路总容量</span>
-          <span class="entity-stat-value">{{ selectedEntityInfo.capacityText }}</span>
-        </div>
-        <div class="entity-stat-card">
           <span class="entity-stat-label">平均利用率</span>
           <span class="entity-stat-value">{{ selectedEntityInfo.utilizationText }}</span>
         </div>
@@ -499,11 +495,6 @@ function buildSelectedEntityInfo(entityId) {
   const routes = collectEntityRoutes(entityId);
 
   const totalTx = links.reduce((sum, item) => sum + (Number.isFinite(item.txRate) ? item.txRate : 0), 0);
-  const totalCapacity = links.reduce(
-    (sum, item) => sum + (Number.isFinite(item.capacity) ? item.capacity : 0),
-    0,
-  );
-
   const utilizationSamples = links
     .map((item) => (
       Number.isFinite(item.utilization)
@@ -572,7 +563,6 @@ function buildSelectedEntityInfo(entityId) {
     routeCount: nodeType === "ground_station" ? connectedAircraftIds.size : routes.length,
     routeCountLabel: nodeType === "ground_station" ? "连接飞机数量" : "参与路由",
     txRateText: formatFixed(totalTx, 1, " Mbps"),
-    capacityText: formatFixed(totalCapacity, 1, " Mbps"),
     utilizationText: Number.isFinite(avgUtilization) ? `${(avgUtilization * 100).toFixed(1)}%` : "--",
     latencyText: Number.isFinite(avgLatencyMs) ? `${avgLatencyMs.toFixed(2)} ms` : "--",
     linkDetails,

@@ -47,8 +47,11 @@ class MultiGeoRoutingTests(unittest.TestCase):
             sat_antenna_angle=35.0,
             bw_gsl=150.0,
             geo_sat_antenna_angle=8.0,
-            bw_geo_gsl=300.0,
+            bw_geo_gsl=400.0,
         )
+
+        self.assertEqual(access._gsl_bandwidth("sat_1_1"), 150.0)
+        self.assertEqual(access._gsl_bandwidth("sat_geo_1"), 400.0)
 
         gsl_edges = access.compute(self.nodes, [self.demand])
         edge_keys = {edge.key() for edge in gsl_edges}
@@ -61,20 +64,20 @@ class MultiGeoRoutingTests(unittest.TestCase):
             },
         )
         self.assertTrue(all(edge.edge_type == "GSL" for edge in gsl_edges))
-        self.assertTrue(all(edge.capacity == 300.0 for edge in gsl_edges))
+        self.assertTrue(all(edge.capacity == 400.0 for edge in gsl_edges))
 
     def test_geo_relay_route_respects_neighbor_and_link_limits(self) -> None:
         access = AccessLayer(
             sat_antenna_angle=35.0,
             bw_gsl=150.0,
             geo_sat_antenna_angle=8.0,
-            bw_geo_gsl=300.0,
+            bw_geo_gsl=400.0,
         )
         gsl_edges = access.compute(self.nodes, [self.demand])
 
         routing = RoutingEngine(
             satellite_ids=[node.id for node in self.geo_nodes],
-            bw_isl=500.0,
+            bw_isl=200.0,
             geo_isl_neighbor_count=2,
             isl_require_los=True,
         )
@@ -87,7 +90,7 @@ class MultiGeoRoutingTests(unittest.TestCase):
 
         self.assertTrue(all(count <= 2 for count in neighbor_counts.values()))
         self.assertTrue(all(edge.edge_type == "ISL" for edge in isl_edges))
-        self.assertTrue(all(edge.capacity == 500.0 for edge in isl_edges))
+        self.assertTrue(all(edge.capacity == 200.0 for edge in isl_edges))
         self.assertNotIn(
             tuple(sorted(("sat_geo_1", "sat_geo_3"))),
             {edge.key() for edge in isl_edges},
@@ -112,9 +115,9 @@ class MultiGeoRoutingTests(unittest.TestCase):
             edge = used_edge_map[tuple(sorted((source, target)))]
             self.assertEqual(edge.traffic, self.demand.rate_mbps)
             if edge.edge_type == "GSL":
-                self.assertEqual(edge.capacity, 300.0)
+                self.assertEqual(edge.capacity, 400.0)
             else:
-                self.assertEqual(edge.capacity, 500.0)
+                self.assertEqual(edge.capacity, 200.0)
 
         self.assertEqual(metrics[0].path, route.path)
         self.assertGreater(metrics[0].latency_ms, 0.0)
