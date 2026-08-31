@@ -111,11 +111,12 @@
           :src="selectedEntityInfo.modelSrc"
           camera-controls
           auto-rotate
-          @load="onEntityPreviewModelLoad"
           @error="onEntityPreviewModelError"
-          shadow-intensity="0.8"
-          exposure="1.1"
+          :shadow-intensity="selectedEntityInfo.nodeType === 'aircraft' ? 0.65 : 0.8"
+          :exposure="selectedEntityInfo.nodeType === 'aircraft' ? 0.82 : 1.1"
+          shadow-softness="0.9"
           environment-image="neutral"
+          tone-mapping="neutral"
         />
         <img v-else-if="modelPreviewError" class="entity-model-preview-fallback" src="/pictures/satellite-proxy.svg" alt="卫星预览" />
         <div v-else class="entity-model-preview-loading">正在加载卫星预览…</div>
@@ -402,32 +403,6 @@ function readEntityPosition(entity) {
     latDeg: Cesium.Math.toDegrees(cartographic.latitude),
     altKm: cartographic.height / 1000,
   };
-}
-
-/**
- * 信息面板模型加载完成后，为飞机模型增加色彩，避免 Airplane.glb 在 panel 里偏白。
- */
-function onEntityPreviewModelLoad(event) {
-  const nodeType = selectedEntityInfo.value?.nodeType;
-  if (nodeType !== "aircraft") {
-    return;
-  }
-  const materials = event?.target?.model?.materials;
-  if (!Array.isArray(materials) || materials.length === 0) {
-    return;
-  }
-  for (const material of materials) {
-    const pbr = material?.pbrMetallicRoughness;
-    if (pbr?.setBaseColorFactor) {
-      pbr.setBaseColorFactor([0.36, 0.8, 0.96, 1]);
-    }
-    if (pbr?.setMetallicFactor) {
-      pbr.setMetallicFactor(0.16);
-    }
-    if (pbr?.setRoughnessFactor) {
-      pbr.setRoughnessFactor(0.44);
-    }
-  }
 }
 
 function onEntityPreviewModelError() {

@@ -25,6 +25,7 @@
 
 import * as Cesium from "cesium";
 import { normalizeTerminalOnlyRoute } from "./routePathPolicy";
+import { TOPOLOGY_LINK_STYLE } from "./satsimSceneStyle";
 
 // ============= 颜色配置 =============
 const SATELLITE_UNIFIED_COLOR = Cesium.Color.fromCssColorString("#ffd75e");
@@ -938,8 +939,8 @@ function rebuildTopologyEntities(topologyDataSource, entityLookup, activeTopolog
       id: `topology:${link.source}:${link.target}:${link.type}`,
       polyline: {
         positions: positionPairCallback(entityLookup, link.source, link.target),
-        width: 0.55,
-        material: TOPOLOGY_ISL_COLOR.withAlpha(0.16),
+        width: TOPOLOGY_LINK_STYLE.width,
+        material: TOPOLOGY_ISL_COLOR.withAlpha(TOPOLOGY_LINK_STYLE.opacity),
       },
     });
   }
@@ -2483,8 +2484,8 @@ export async function loadSatsimScenario({
     const topologyState = buildTopologySegments(incrementalState.activeTopology, bundle);
     if (topologyState.signature !== lastTopologySignature) {
       syncPolylinePrimitivePool(topologyPolylineCollection, topologyPolylinePool, topologyState.segments, {
-        colorResolver: () => TOPOLOGY_ISL_COLOR.withAlpha(0.16),
-        widthResolver: () => 0.55,
+        colorResolver: () => TOPOLOGY_ISL_COLOR.withAlpha(TOPOLOGY_LINK_STYLE.opacity),
+        widthResolver: () => TOPOLOGY_LINK_STYLE.width,
       });
       lastTopologySignature = topologyState.signature;
     }
