@@ -13,7 +13,7 @@
         <div class="v2-helper-card stack-gap wizard-map-card">
           <h3>地面站位置地图</h3>
           <WizardCesiumMap
-            :height="430"
+            :height="520"
             :hint="'可在全球范围点选位置；重复点击会覆盖 GS_1 的坐标。'"
             :markers="groundStationMarker"
             @map-click="onMapClick"
