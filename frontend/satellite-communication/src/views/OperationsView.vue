@@ -263,6 +263,7 @@ const playbackDurationText = computed(() => formatPlaybackTime(playbackDurationS
 // ============= Cesium 相关 =============
 let viewer = null;                                                    // 主 3D 视图
 let removeAutoRotate = null;                                          // 地球自转销毁函数
+let removeSceneFillLight = null;                                      // 相机补光销毁函数
 let removeCameraHeightDisplay = null;
 let removeImageryNetworkSync = null;
 let removeImageryFallback = null;
@@ -810,6 +811,7 @@ function createViewer() {
   viewer.scene.globe.maximumScreenSpaceError = 1.8;
 
   viewer.scene.backgroundColor = Cesium.Color.BLACK;
+  bindSceneFillLight();
   bindCameraHeightDisplay();
   removeCapitalLabels = attachWorldCapitalLabels(viewer);
 
@@ -826,6 +828,36 @@ function createViewer() {
     removeImageryNetworkSync = bindGlobeImageryNetworkSync(viewer);
     removeImageryFallback = bindAmapImageryFallback(viewer);
   });
+}
+
+/**
+ * 为 3D 模型提供稳定的正面补光。
+ *
+ * Cesium 默认太阳光会随着仿真时间和模型朝向产生很大的明暗差。这里让方向光始终
+ * 从相机照向场景，使不同位置、不同航向的飞机都保持清晰，同时仍保留适度立体感。
+ */
+function bindSceneFillLight() {
+  if (!viewer || viewer.isDestroyed()) return;
+
+  const light = new Cesium.DirectionalLight({
+    direction: Cesium.Cartesian3.clone(viewer.camera.directionWC),
+    color: Cesium.Color.fromCssColorString("#f4f8ff"),
+    intensity: 1.8,
+  });
+  viewer.scene.light = light;
+
+  const updateLightDirection = () => {
+    if (!viewer || viewer.isDestroyed()) return;
+    Cesium.Cartesian3.normalize(viewer.camera.directionWC, light.direction);
+  };
+
+  viewer.scene.preRender.addEventListener(updateLightDirection);
+  removeSceneFillLight = () => {
+    if (viewer && !viewer.isDestroyed()) {
+      viewer.scene.preRender.removeEventListener(updateLightDirection);
+    }
+    removeSceneFillLight = null;
+  };
 }
 
 function formatCameraHeight(heightMeters) {
@@ -1227,6 +1259,7 @@ function cleanupScenarioHandles() {
  */
 function destroyAllScenes() {
   if (removeAutoRotate) removeAutoRotate();
+  if (removeSceneFillLight) removeSceneFillLight();
   if (removeCameraHeightDisplay) removeCameraHeightDisplay();
   if (removeImageryNetworkSync) {
     removeImageryNetworkSync();
@@ -1258,6 +1291,7 @@ function destroyAllScenes() {
 
   viewer = null;
   removeAutoRotate = null;
+  removeSceneFillLight = null;
   cameraHeightText.value = "--";
   lastRotateTime = null;
 }
