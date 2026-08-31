@@ -66,6 +66,8 @@ const SATELLITE_PROXY_FADE_START_DISTANCE_M = 7000000;
 const SATELLITE_PROXY_FADE_END_DISTANCE_M = 10000000;
 const SATELLITE_PROXY_POINT_COLOR = Cesium.Color.fromCssColorString("#b9ddf2");
 const SATELLITE_PROXY_POINT_ACTIVE_COLOR = Cesium.Color.fromCssColorString("#ffd75e");
+const MINI_MAP_WORLD_VIEW_HEIGHT_M = 5500000;
+const MINI_MAP_REGIONAL_VIEW_HEIGHT_M = 2000000;
 const SATELLITE_LEO_PROXY_WIDTH_PX = 54;
 const SATELLITE_LEO_PROXY_HEIGHT_PX = 36;
 const SATELLITE_GEO_PROXY_WIDTH_PX = 42;
@@ -440,8 +442,8 @@ function styleEntities(dataSource, bundle, options) {
         entity.label.fillColor = new Cesium.ConstantProperty(SATELLITE_ACTIVE_COLOR);
         entity.label.outlineColor = new Cesium.ConstantProperty(Cesium.Color.BLACK);
         entity.label.outlineWidth = new Cesium.ConstantProperty(3);
-        entity.label.font = new Cesium.ConstantProperty("16px Segoe UI");
-        entity.label.pixelOffset = new Cesium.ConstantProperty(new Cesium.Cartesian2(0, -34));
+        entity.label.font = new Cesium.ConstantProperty(options.miniMode ? "600 12px Segoe UI" : "16px Segoe UI");
+        entity.label.pixelOffset = new Cesium.ConstantProperty(new Cesium.Cartesian2(0, options.miniMode ? -16 : -34));
         entity.label.scaleByDistance = new Cesium.ConstantProperty(new Cesium.NearFarScalar(1.5e6, 1.25, 9e6, 0.55));
       }
     }
@@ -471,13 +473,13 @@ function styleEntities(dataSource, bundle, options) {
       }
 
       if (entity.label) {
-        entity.label.show = new Cesium.ConstantProperty(!options.miniMode);
+        entity.label.show = new Cesium.ConstantProperty(true);
         entity.label.fillColor = new Cesium.ConstantProperty(AIRCRAFT_LABEL_COLOR);
         entity.label.outlineColor = new Cesium.ConstantProperty(Cesium.Color.TRANSPARENT);
         entity.label.outlineWidth = new Cesium.ConstantProperty(0);
         entity.label.style = new Cesium.ConstantProperty(Cesium.LabelStyle.FILL);
-        entity.label.font = new Cesium.ConstantProperty("600 17px Segoe UI");
-        entity.label.pixelOffset = new Cesium.ConstantProperty(new Cesium.Cartesian2(0, -48));
+        entity.label.font = new Cesium.ConstantProperty(options.miniMode ? "600 12px Segoe UI" : "600 17px Segoe UI");
+        entity.label.pixelOffset = new Cesium.ConstantProperty(new Cesium.Cartesian2(0, options.miniMode ? -18 : -48));
         entity.label.showBackground = new Cesium.ConstantProperty(false);
         entity.label.scaleByDistance = new Cesium.ConstantProperty(new Cesium.NearFarScalar(1.2e6, 1.2, 8e6, 0.6));
       }
@@ -505,13 +507,13 @@ function styleEntities(dataSource, bundle, options) {
       }
 
       if (entity.label) {
-        entity.label.show = new Cesium.ConstantProperty(!options.miniMode);
+        entity.label.show = new Cesium.ConstantProperty(true);
         entity.label.fillColor = new Cesium.ConstantProperty(GROUND_STATION_LABEL_COLOR);
         entity.label.outlineColor = new Cesium.ConstantProperty(Cesium.Color.TRANSPARENT);
         entity.label.outlineWidth = new Cesium.ConstantProperty(0);
         entity.label.style = new Cesium.ConstantProperty(Cesium.LabelStyle.FILL);
-        entity.label.font = new Cesium.ConstantProperty("700 18px Segoe UI");
-        entity.label.pixelOffset = new Cesium.ConstantProperty(new Cesium.Cartesian2(0, -44));
+        entity.label.font = new Cesium.ConstantProperty(options.miniMode ? "700 12px Segoe UI" : "700 18px Segoe UI");
+        entity.label.pixelOffset = new Cesium.ConstantProperty(new Cesium.Cartesian2(0, options.miniMode ? -18 : -44));
         entity.label.showBackground = new Cesium.ConstantProperty(false);
         entity.label.scaleByDistance = new Cesium.ConstantProperty(new Cesium.NearFarScalar(1.2e6, 1.2, 9e6, 0.65));
       }
@@ -521,9 +523,7 @@ function styleEntities(dataSource, bundle, options) {
       if (entity.path) {
         entity.path.show = new Cesium.ConstantProperty(false);
       }
-      if (entity.label) {
-        entity.label.show = new Cesium.ConstantProperty(false);
-      }
+      if (entity.label) entity.label.show = new Cesium.ConstantProperty(nodeType !== "satellite");
       entity.model = undefined;
     }
   }
@@ -596,6 +596,7 @@ function createSatellitePointPrimitives(viewer, bundle, trackStore, entityLookup
       defaultPointColor: miniMode ? SATELLITE_UNIFIED_COLOR : SATELLITE_PROXY_POINT_COLOR,
       defaultPointPixelSize: 2,
       detailHidden: false,
+      miniHidden: false,
     });
   }
 
@@ -619,7 +620,7 @@ function updateSatellitePointPrimitives(primitiveLookup, trackStore, relativeTim
     // 先用 scratch 采样，再 clone 生成新引用触发 setter 更新。
     const position = sampleCompactTrack(track, relativeTime, scratchSatellitePosition);
     proxy.point.position = Cesium.Cartesian3.clone(position);
-    proxy.point.show = !proxy.detailHidden;
+    proxy.point.show = !proxy.detailHidden && !proxy.miniHidden;
     if (proxy.billboard) {
       proxy.billboard.position = Cesium.Cartesian3.clone(position);
       proxy.billboard.show = !proxy.detailHidden;
@@ -2321,6 +2322,43 @@ export async function loadSatsimScenario({
 
   const incrementalState = createIncrementalState(bundle);
   const activeRouteSatelliteIds = new Set();
+  let miniSatelliteDisplayMode = "";
+  const syncMiniSatelliteAppearance = (force = false) => {
+    if (!miniMode) {
+      return;
+    }
+
+    const cameraHeight = Number(viewer.camera.positionCartographic?.height);
+    const nextMode = cameraHeight >= MINI_MAP_WORLD_VIEW_HEIGHT_M
+      ? "world"
+      : cameraHeight >= MINI_MAP_REGIONAL_VIEW_HEIGHT_M
+        ? "regional"
+        : "local";
+    if (!force && nextMode === miniSatelliteDisplayMode) {
+      return;
+    }
+    miniSatelliteDisplayMode = nextMode;
+
+    for (const [satId, proxy] of satellitePrimitives.lookup) {
+      const active = activeRouteSatelliteIds.has(satId);
+      const geo = isGeoSatelliteId(satId);
+      proxy.miniHidden = nextMode === "world" && !active;
+      proxy.point.show = !proxy.detailHidden && !proxy.miniHidden;
+      if (proxy.miniHidden) {
+        continue;
+      }
+      if (active) {
+        proxy.point.color = SATELLITE_PROXY_POINT_ACTIVE_COLOR;
+        proxy.point.pixelSize = 4;
+      } else if (nextMode === "regional") {
+        proxy.point.color = SATELLITE_PROXY_POINT_COLOR.withAlpha(0.34);
+        proxy.point.pixelSize = geo ? 1.6 : 1.25;
+      } else {
+        proxy.point.color = SATELLITE_PROXY_POINT_COLOR.withAlpha(0.55);
+        proxy.point.pixelSize = geo ? 2.2 : 1.8;
+      }
+    }
+  };
   const satelliteStyleOptions = {
     satelliteModelScale,
     satelliteModelMinPixelSize,
@@ -2509,6 +2547,7 @@ export async function loadSatsimScenario({
         for (const satId of routeState.activeRouteSatelliteIds) {
           activeRouteSatelliteIds.add(satId);
         }
+        syncMiniSatelliteAppearance(true);
         lastRouteSignature = routeState.signature;
       }
     }
@@ -2576,6 +2615,15 @@ export async function loadSatsimScenario({
 
   const onScenePreUpdate = () => processGeoCoverageRenderer(geoCoverageRenderer);
   viewer.scene.preUpdate.addEventListener(onScenePreUpdate);
+  const onMiniCameraChanged = () => {
+    syncMiniSatelliteAppearance();
+    if (viewer.scene.requestRenderMode) {
+      viewer.scene.requestRender();
+    }
+  };
+  if (miniMode) {
+    viewer.camera.changed.addEventListener(onMiniCameraChanged);
+  }
   const onTick = (clock) => updateScene(clock.currentTime);
   viewer.clock.onTick.addEventListener(onTick);
   updateScene(viewer.clock.currentTime);
@@ -2591,6 +2639,9 @@ export async function loadSatsimScenario({
       viewer.clock.onTick.removeEventListener(onTick);
       viewer.scene.preUpdate.removeEventListener(onScenePreUpdate);
       viewer.trackedEntityChanged.removeEventListener(onTrackedEntityChanged);
+      if (miniMode) {
+        viewer.camera.changed.removeEventListener(onMiniCameraChanged);
+      }
       if (enableSatelliteModelPool) {
         clearSatelliteModels(entityLookup, modeledSatelliteIds);
       }

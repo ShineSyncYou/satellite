@@ -347,8 +347,11 @@ async function initMiniMap() {
     miniViewer.scene.screenSpaceCameraController.enableTilt = false;
     miniViewer.scene.screenSpaceCameraController.enableLook = false;
     miniViewer.scene.screenSpaceCameraController.enableRotate = false;
+    miniViewer.scene.screenSpaceCameraController.zoomFactor = 1.25;
+    miniViewer.scene.screenSpaceCameraController.minimumZoomDistance = 750000;
+    miniViewer.scene.screenSpaceCameraController.maximumZoomDistance = 50000000;
     setupViewerImagery(miniViewer, miniImageryCleanup);
-    miniViewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(104.0, 35.0, 7600000), duration: 0 });
+    miniViewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(104.0, 35.0, 3600000), duration: 0 });
   }
   if (miniScenarioHandle) miniScenarioHandle.cleanup();
   if (!currentScenarioRuntime.value || !currentScenarioBundle) return;
