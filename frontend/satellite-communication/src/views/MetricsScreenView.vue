@@ -35,7 +35,7 @@
               <div class="ground-metrics">
                 <p><span>位置</span><strong>{{ groundStationInfo.positionText }}</strong></p>
                 <p><span>天气</span><strong>{{ weatherText }}</strong></p>
-                <p><span>当前链路损耗</span><strong>{{ groundStationInfo.lossText }}</strong></p>
+                <p><span>平均端到端丢包率</span><strong>{{ groundStationInfo.lossText }}</strong></p>
                 <p><span>当前有效带宽</span><strong>{{ groundStationInfo.bandwidthText }}</strong></p>
                 <p><span>接入飞机节点</span><strong>{{ groundStationInfo.connectedAircraftCount }}</strong></p>
               </div>
@@ -58,7 +58,7 @@
                   <p><span>位置</span><strong>{{ sat.positionText }}</strong></p>
                   <p><span>高度</span><strong>{{ sat.altitudeText }}</strong></p>
                   <p><span>关联链路</span><strong>{{ sat.linkCount }}</strong></p>
-                  <p><span>发送带宽</span><strong>{{ sat.txRateText }}</strong></p>
+                  <p><span>当前发送带宽</span><strong>{{ sat.txRateText }}</strong></p>
                   <p><span>平均利用率</span><strong>{{ sat.utilizationText }}</strong></p>
                 </div>
               </article>
@@ -201,6 +201,22 @@ function formatClockText(seconds) {
 function formatNum(value, digits = 2, suffix = "") { return Number.isFinite(Number(value)) ? `${Number(value).toFixed(digits)}${suffix}` : "--"; }
 function sortByRelativeTime(items) { return [...(items || [])].sort((a, b) => Number(a.relative_time_s) - Number(b.relative_time_s)); }
 
+function routeActualTxBandwidth(route) {
+  const actual = Number(route?.actual_tx_bandwidth_mbps);
+  if (Number.isFinite(actual)) return Math.max(0, actual);
+  const effective = Number(route?.effective_bandwidth_mbps);
+  return Number.isFinite(effective) ? Math.max(0, effective) : 0;
+}
+
+function findActiveTopologyLink(source, target) {
+  for (const link of sim.activeTopology.values()) {
+    if ((link.source === source && link.target === target) || (link.source === target && link.target === source)) {
+      return link;
+    }
+  }
+  return null;
+}
+
 function resetSimState() {
   // 回放从头（或场景切换）时，增量状态需要重置。
   sim.lastTime = -1;
@@ -229,7 +245,9 @@ function applyRouteEvent(event) {
     const normalizedRoute = normalizeTerminalOnlyRoute(route, nodeTypeById);
     sim.activeRoutes.set(`${route.source}|${route.target}`, {
       source: String(route.source), target: String(route.target), connected: normalizedRoute.connected, path: normalizedRoute.path,
-      hop_count: Number(route.hop_count), effective_bandwidth_mbps: Number(route.effective_bandwidth_mbps), latency_ms: Number(route.latency_ms),
+      hop_count: Number(route.hop_count), requested_bandwidth_mbps: Number(route.requested_bandwidth_mbps),
+      actual_tx_bandwidth_mbps: Number(route.actual_tx_bandwidth_mbps), dropped_bandwidth_mbps: Number(route.dropped_bandwidth_mbps),
+      effective_bandwidth_mbps: Number(route.effective_bandwidth_mbps), latency_ms: Number(route.latency_ms),
       packet_loss_rate: Number(route.packet_loss_rate), ber: Number(route.ber),
     });
   }
@@ -665,12 +683,14 @@ function rebuildGroundInfo(relativeTimeS) {
   }
 
   const gsPosition = interpolateTrack(nodeTracksById.get(groundStationId), relativeTimeS);
-  const gsLinks = [...sim.activeTopology.values()].filter((link) => link.source === groundStationId || link.target === groundStationId);
-  const gsRoutes = [...sim.activeRoutes.values()].filter((route) => route.connected && Array.isArray(route.path) && route.path.includes(groundStationId));
+  const gsRoutes = [...sim.activeRoutes.values()].filter((route) => (
+    route.connected
+    && Array.isArray(route.path)
+    && route.path[route.path.length - 1] === groundStationId
+  ));
 
-  const linkTxSum = gsLinks.reduce((sum, link) => sum + (Number.isFinite(Number(link.tx_rate_mbps)) ? Number(link.tx_rate_mbps) : 0), 0);
   const routeEffectiveSum = gsRoutes.reduce((sum, route) => sum + (Number.isFinite(Number(route.effective_bandwidth_mbps)) ? Number(route.effective_bandwidth_mbps) : 0), 0);
-  const totalBw = linkTxSum > 0 ? linkTxSum : routeEffectiveSum;
+  const totalBw = routeEffectiveSum;
   const lossSamples = gsRoutes.map((route) => Number(route.packet_loss_rate)).filter((v) => Number.isFinite(v));
   const avgLoss = lossSamples.length > 0 ? lossSamples.reduce((sum, value) => sum + value, 0) / lossSamples.length : NaN;
   const connectedAircraftIds = new Set();
@@ -713,34 +733,51 @@ function rebuildSatelliteRows(relativeTimeS) {
 
   const linkStats = new Map();
   for (const link of sim.activeTopology.values()) {
-    const tx = Number(link.tx_rate_mbps);
-    const util = Number(link.utilization);
     const update = (nodeId) => {
       if (!activeSatelliteIds.has(nodeId)) return;
-      const prev = linkStats.get(nodeId) || { linkCount: 0, txSum: 0, utilSamples: [] };
+      const prev = linkStats.get(nodeId) || { linkCount: 0, outgoingByLink: new Map() };
       prev.linkCount += 1;
-      if (Number.isFinite(tx)) prev.txSum += tx;
-      if (Number.isFinite(util)) prev.utilSamples.push(util);
       linkStats.set(nodeId, prev);
     };
     update(link.source);
     update(link.target);
   }
 
+  for (const route of sim.activeRoutes.values()) {
+    if (!route.connected || !Array.isArray(route.path)) continue;
+    const actualTx = routeActualTxBandwidth(route);
+    for (let index = 0; index < route.path.length - 1; index += 1) {
+      const nodeId = route.path[index];
+      if (nodeTypeById.get(nodeId) !== "satellite") continue;
+      const peerId = route.path[index + 1];
+      const link = findActiveTopologyLink(nodeId, peerId);
+      if (!link) continue;
+      const stats = linkStats.get(nodeId) || { linkCount: 0, outgoingByLink: new Map() };
+      const linkId = `${link.source}|${link.target}|${link.type}`;
+      const outgoing = stats.outgoingByLink.get(linkId) || { rate: 0, capacity: Number(link.bandwidth_mbps) };
+      outgoing.rate += actualTx;
+      stats.outgoingByLink.set(linkId, outgoing);
+      linkStats.set(nodeId, stats);
+    }
+  }
+
   const rows = [...activeSatelliteIds].map((id) => {
     const position = interpolateTrack(nodeTracksById.get(id), relativeTimeS);
-    const stats = linkStats.get(id) || { linkCount: 0, txSum: 0, utilSamples: [] };
-    const avgUtil = stats.utilSamples.length > 0 ? stats.utilSamples.reduce((sum, value) => sum + value, 0) / stats.utilSamples.length : NaN;
+    const stats = linkStats.get(id) || { linkCount: 0, outgoingByLink: new Map() };
+    const outgoingLinks = [...stats.outgoingByLink.values()];
+    const txSum = outgoingLinks.reduce((sum, link) => sum + link.rate, 0);
+    const capacitySum = outgoingLinks.reduce((sum, link) => sum + (Number.isFinite(link.capacity) ? link.capacity : 0), 0);
+    const avgUtil = capacitySum > 0 ? txSum / capacitySum : NaN;
     return {
       id,
       routeCount: routeCountBySatellite.get(id) || 0,
       positionText: posText(position),
       altitudeText: position ? `${position.altKm.toFixed(2)} km` : "--",
       linkCount: stats.linkCount,
-      txRateText: formatNum(stats.txSum, 1, " Mbps"),
+      txRateText: formatNum(txSum, 1, " Mbps"),
       utilizationText: Number.isFinite(avgUtil) ? `${(avgUtil * 100).toFixed(1)}%` : "--",
       sortRouteCount: routeCountBySatellite.get(id) || 0,
-      sortTx: stats.txSum,
+      sortTx: txSum,
     };
   });
 

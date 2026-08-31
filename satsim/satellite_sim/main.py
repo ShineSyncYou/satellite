@@ -10,7 +10,7 @@ from .config import PreparedSimulationAssets, SimulationConfig, load_simulation_
 from .core import AccessLayer, PerformanceLayer, PhysicalSpaceEngine, RoutingEngine
 from .core.handover_penalty import AccessHandoverPenaltyTracker, HandoverPenaltyPolicy
 
-SCHEMA_VERSION = "1.3.0"
+SCHEMA_VERSION = "1.4.0"
 
 
 def _normalize_relative_time(value: float) -> int | float:
@@ -93,6 +93,9 @@ def _route_state(route: dict[str, Any]) -> dict[str, Any]:
         "steady_latency_ms": _round_float(route.get("steady_latency_ms", route.get("latency_ms", -1.0)), 6),
         "steady_packet_loss_rate": _round_float(route.get("steady_packet_loss_rate", route.get("packet_loss_rate", 1.0)), 12),
         "steady_ber": _round_float(route.get("steady_ber", route.get("ber", 1.0)), 12),
+        "requested_bandwidth_mbps": _round_float(route.get("requested_bandwidth_mbps", 0.0), 6),
+        "actual_tx_bandwidth_mbps": _round_float(route.get("actual_tx_bandwidth_mbps", 0.0), 6),
+        "dropped_bandwidth_mbps": _round_float(route.get("dropped_bandwidth_mbps", 0.0), 6),
         "effective_bandwidth_mbps": _round_float(route.get("effective_bandwidth_mbps", 0.0), 6),
         "latency_ms": _round_float(route.get("latency_ms", -1.0), 6),
         "packet_loss_rate": _round_float(route.get("packet_loss_rate", 1.0), 12),
@@ -112,6 +115,9 @@ def _route_state_signature(route: dict[str, Any]) -> tuple[Any, ...]:
     return (
         bool(route["connected"]),
         tuple(route["path"]),
+        _round_float(route.get("requested_bandwidth_mbps", 0.0), 6),
+        _round_float(route.get("actual_tx_bandwidth_mbps", 0.0), 6),
+        _round_float(route.get("dropped_bandwidth_mbps", 0.0), 6),
         _round_float(route.get("effective_bandwidth_mbps", 0.0), 6),
         _round_float(route.get("latency_ms", -1.0), 6),
         _round_float(route.get("packet_loss_rate", 1.0), 12),
@@ -216,6 +222,9 @@ def _build_metadata(config: SimulationConfig, assets: PreparedSimulationAssets) 
             "distance_km": "km",
             "bandwidth_mbps": "Mbps",
             "tx_rate_mbps": "Mbps",
+            "requested_bandwidth_mbps": "Mbps",
+            "actual_tx_bandwidth_mbps": "Mbps",
+            "dropped_bandwidth_mbps": "Mbps",
             "effective_bandwidth_mbps": "Mbps",
             "utilization": "ratio",
             "latency_ms": "ms",

@@ -146,16 +146,20 @@
           <span class="entity-stat-value">{{ selectedEntityInfo.linkCount }}</span>
         </div>
         <div class="entity-stat-card">
-          <span class="entity-stat-label">当前发送带宽</span>
+          <span class="entity-stat-label">{{ selectedEntityInfo.routeCountLabel }}</span>
+          <span class="entity-stat-value">{{ selectedEntityInfo.routeCount }}</span>
+        </div>
+        <div v-if="selectedEntityInfo.showRequestedBandwidth" class="entity-stat-card">
+          <span class="entity-stat-label">请求带宽</span>
+          <span class="entity-stat-value">{{ selectedEntityInfo.requestedBandwidthText }}</span>
+        </div>
+        <div class="entity-stat-card">
+          <span class="entity-stat-label">{{ selectedEntityInfo.bandwidthLabel }}</span>
           <span class="entity-stat-value">{{ selectedEntityInfo.txRateText }}</span>
         </div>
         <div class="entity-stat-card">
           <span class="entity-stat-label">平均利用率</span>
           <span class="entity-stat-value">{{ selectedEntityInfo.utilizationText }}</span>
-        </div>
-        <div class="entity-stat-card">
-          <span class="entity-stat-label">{{ selectedEntityInfo.routeCountLabel }}</span>
-          <span class="entity-stat-value">{{ selectedEntityInfo.routeCount }}</span>
         </div>
         <div class="entity-stat-card">
           <span class="entity-stat-label">平均时延</span>
@@ -164,13 +168,13 @@
       </div>
 
       <div v-if="selectedEntityInfo.linkDetails.length > 0" class="entity-links">
-        <h4>链路明细</h4>
+        <h4>链路明细（{{ selectedEntityInfo.linkMetricLabel }} / 利用率）</h4>
         <ul>
           <li v-for="link in selectedEntityInfo.linkDetails" :key="link.id">
             <span>{{ link.peer }}</span>
             <span>{{ link.type }}</span>
             <span>{{ link.txRateText }}</span>
-            <span>{{ link.lossText }}</span>
+            <span>{{ link.utilizationText }}</span>
           </li>
         </ul>
       </div>
@@ -400,14 +404,6 @@ function readEntityPosition(entity) {
   };
 }
 
-function linkLossRateFromRoute(route) {
-  const loss = Number(route?.packet_loss_rate);
-  if (Number.isFinite(loss)) {
-    return Math.max(0, Math.min(1, loss));
-  }
-  return null;
-}
-
 /**
  * 信息面板模型加载完成后，为飞机模型增加色彩，避免 Airplane.glb 在 panel 里偏白。
  */
@@ -451,9 +447,7 @@ function collectEntityLinks(entityId) {
       id: `${link.source}|${link.target}|${link.type}`,
       peer: link.source === entityId ? link.target : link.source,
       type: link.type || "LINK",
-      txRate: Number(link.tx_rate_mbps),
       capacity: Number(link.bandwidth_mbps),
-      utilization: Number(link.utilization),
     });
   }
   return links;
@@ -476,6 +470,75 @@ function collectEntityRoutes(entityId) {
   return routes;
 }
 
+function routeActualTxBandwidth(route) {
+  const actual = Number(route?.actual_tx_bandwidth_mbps);
+  if (Number.isFinite(actual)) {
+    return Math.max(0, actual);
+  }
+  const effective = Number(route?.effective_bandwidth_mbps);
+  return Number.isFinite(effective) ? Math.max(0, effective) : 0;
+}
+
+function routeRequestedBandwidth(route) {
+  const requested = Number(route?.requested_bandwidth_mbps);
+  if (Number.isFinite(requested)) {
+    return Math.max(0, requested);
+  }
+  return routeActualTxBandwidth(route);
+}
+
+function collectNodeFlowStats(entityId, nodeType, routes, links) {
+  const linkByPeer = new Map(links.map((link) => [link.peer, link]));
+  const flowByLinkId = new Map();
+  let bandwidthTotal = 0;
+
+  for (const route of routes) {
+    const nodeIndex = route.path.indexOf(entityId);
+    const useReceivingEndpoint = nodeType === "ground_station";
+    const neighborIndex = useReceivingEndpoint ? nodeIndex - 1 : nodeIndex + 1;
+    if (nodeIndex < 0 || neighborIndex < 0 || neighborIndex >= route.path.length) {
+      continue;
+    }
+    if (useReceivingEndpoint && nodeIndex !== route.path.length - 1) {
+      continue;
+    }
+
+    const link = linkByPeer.get(route.path[neighborIndex]);
+    if (!link) {
+      continue;
+    }
+    const actualTx = routeActualTxBandwidth(route);
+    const displayRate = useReceivingEndpoint
+      ? Math.max(0, Number(route.effective_bandwidth_mbps) || 0)
+      : actualTx;
+    bandwidthTotal += displayRate;
+
+    const flow = flowByLinkId.get(link.id) || { ...link, actualTx: 0 };
+    flow.actualTx += actualTx;
+    flowByLinkId.set(link.id, flow);
+  }
+
+  const activeLinks = [...flowByLinkId.values()];
+  const detailLinks = links
+    .map((link) => flowByLinkId.get(link.id) || { ...link, actualTx: 0 })
+    .sort((left, right) => (
+      right.actualTx - left.actualTx
+      || left.peer.localeCompare(right.peer)
+    ));
+  const totalCapacity = activeLinks.reduce(
+    (sum, link) => sum + (Number.isFinite(link.capacity) ? link.capacity : 0),
+    0,
+  );
+  const totalActualTx = activeLinks.reduce((sum, link) => sum + link.actualTx, 0);
+
+  return {
+    bandwidthTotal,
+    activeLinks,
+    detailLinks,
+    utilization: totalCapacity > 0 ? totalActualTx / totalCapacity : NaN,
+  };
+}
+
 /**
  * 构建左侧详情面板数据（卫星/飞机）。
  */
@@ -494,21 +557,10 @@ function buildSelectedEntityInfo(entityId) {
   const location = readEntityPosition(entity);
   const links = collectEntityLinks(entityId);
   const routes = collectEntityRoutes(entityId);
-
-  const totalTx = links.reduce((sum, item) => sum + (Number.isFinite(item.txRate) ? item.txRate : 0), 0);
-  const utilizationSamples = links
-    .map((item) => (
-      Number.isFinite(item.utilization)
-        ? item.utilization
-        : (Number.isFinite(item.capacity) && item.capacity > 0 && Number.isFinite(item.txRate)
-          ? item.txRate / item.capacity
-          : NaN)
-    ))
-    .filter((value) => Number.isFinite(value));
-
-  const avgUtilization = utilizationSamples.length > 0
-    ? utilizationSamples.reduce((sum, value) => sum + value, 0) / utilizationSamples.length
-    : NaN;
+  const flowStats = collectNodeFlowStats(entityId, nodeType, routes, links);
+  const requestedBandwidth = nodeType === "aircraft"
+    ? routes.reduce((sum, route) => sum + routeRequestedBandwidth(route), 0)
+    : null;
 
   const latencySamples = routes
     .map((route) => Number(route.latency_ms))
@@ -530,20 +582,19 @@ function buildSelectedEntityInfo(entityId) {
     }
   }
 
-  const linkDetails = links.slice(0, 8).map((link) => {
-    const routeLossSamples = routes
-      .filter((route) => Array.isArray(route.path) && route.path.includes(link.peer))
-      .map((route) => linkLossRateFromRoute(route))
-      .filter((value) => value != null);
-    const avgLoss = routeLossSamples.length > 0
-      ? routeLossSamples.reduce((sum, value) => sum + value, 0) / routeLossSamples.length
-      : null;
+  const visibleLinks = nodeType === "ground_station"
+    ? flowStats.activeLinks
+    : flowStats.detailLinks;
+  const linkDetails = visibleLinks.slice(0, 8).map((link) => {
+    const utilization = Number.isFinite(link.capacity) && link.capacity > 0
+      ? link.actualTx / link.capacity
+      : NaN;
     return {
       id: link.id,
       peer: link.peer,
       type: link.type,
-      txRateText: formatFixed(link.txRate, 1, " Mbps"),
-      lossText: avgLoss == null ? "--" : `${(avgLoss * 100).toFixed(2)}%`,
+      txRateText: formatFixed(link.actualTx, 1, " Mbps"),
+      utilizationText: Number.isFinite(utilization) ? `${(utilization * 100).toFixed(1)}%` : "--",
     };
   });
 
@@ -560,11 +611,15 @@ function buildSelectedEntityInfo(entityId) {
     latitudeText: location ? `${location.latDeg.toFixed(4)}°` : "--",
     altitudeText: location ? `${location.altKm.toFixed(2)} km` : "--",
     relativeTimeText: `${latestRelativeTimeS.toFixed(2)} s`,
-    linkCount: links.length,
+    linkCount: nodeType === "ground_station" ? flowStats.activeLinks.length : links.length,
     routeCount: nodeType === "ground_station" ? connectedAircraftIds.size : routes.length,
     routeCountLabel: nodeType === "ground_station" ? "连接飞机数量" : "参与路由",
-    txRateText: formatFixed(totalTx, 1, " Mbps"),
-    utilizationText: Number.isFinite(avgUtilization) ? `${(avgUtilization * 100).toFixed(1)}%` : "--",
+    bandwidthLabel: nodeType === "ground_station" ? "当前有效带宽" : "当前发送带宽",
+    linkMetricLabel: nodeType === "ground_station" ? "接收带宽" : "发送带宽",
+    showRequestedBandwidth: nodeType === "aircraft" && requestedBandwidth != null,
+    requestedBandwidthText: requestedBandwidth == null ? "--" : formatFixed(requestedBandwidth, 1, " Mbps"),
+    txRateText: formatFixed(flowStats.bandwidthTotal, 1, " Mbps"),
+    utilizationText: Number.isFinite(flowStats.utilization) ? `${(flowStats.utilization * 100).toFixed(1)}%` : "--",
     latencyText: Number.isFinite(avgLatencyMs) ? `${avgLatencyMs.toFixed(2)} ms` : "--",
     linkDetails,
   };

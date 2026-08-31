@@ -76,6 +76,9 @@ class EndToEndMetric:
     latency_ms: float
     packet_loss_rate: float
     ber: float
+    requested_bandwidth_mbps: float = 0.0
+    actual_tx_bandwidth_mbps: float = 0.0
+    dropped_bandwidth_mbps: float = 0.0
     effective_bandwidth_mbps: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
@@ -89,5 +92,8 @@ class EndToEndMetric:
             "latency_ms": self.latency_ms,
             "packet_loss_rate": self.packet_loss_rate,
             "ber": self.ber,
+            "requested_bandwidth_mbps": self.requested_bandwidth_mbps,
+            "actual_tx_bandwidth_mbps": self.actual_tx_bandwidth_mbps,
+            "dropped_bandwidth_mbps": self.dropped_bandwidth_mbps,
             "effective_bandwidth_mbps": self.effective_bandwidth_mbps,
         }

@@ -132,6 +132,9 @@ function applyRouteEvent(currentRoutes, event, nodeTypeMap) {
       hop_count: normalizedRoute.connected
         ? Math.max(0, normalizedRoute.path.length - 1)
         : 0,
+      requested_bandwidth_mbps: toSafeNumber(route.requested_bandwidth_mbps, 0),
+      actual_tx_bandwidth_mbps: toSafeNumber(route.actual_tx_bandwidth_mbps, 0),
+      dropped_bandwidth_mbps: toSafeNumber(route.dropped_bandwidth_mbps, 0),
       effective_bandwidth_mbps: toSafeNumber(route.effective_bandwidth_mbps, 0),
       latency_ms: toSafeNumber(route.latency_ms, -1),
       packet_loss_rate: toSafeNumber(route.packet_loss_rate, 1),
@@ -142,7 +145,7 @@ function applyRouteEvent(currentRoutes, event, nodeTypeMap) {
 
 /**
  * 计算路由的带宽指标
- * - offeredBandwidthMbps: 路由首跳发送速率
+ * - offeredBandwidthMbps: 路由请求发送速率
  * - effectiveBandwidthMbps: 实际有效带宽（考虑丢包率）
  */
 function routeBandwidthMetrics(route, currentLinks) {
@@ -152,10 +155,17 @@ function routeBandwidthMetrics(route, currentLinks) {
   }
 
   const firstHop = currentLinks.get(edgeIdentity(path[0], path[1]));
-  const offeredBandwidthMbps = firstHop ? toSafeNumber(firstHop.tx_rate_mbps, 0) : 0;
+  const actualTxBandwidthMbps = toSafeNumber(route.actual_tx_bandwidth_mbps, 0);
+  const hasActualTxBandwidth = Number.isFinite(Number(route.actual_tx_bandwidth_mbps));
+  const offeredBandwidthMbps = toSafeNumber(
+    route.requested_bandwidth_mbps,
+    actualTxBandwidthMbps > 0
+      ? actualTxBandwidthMbps
+      : (firstHop ? toSafeNumber(firstHop.tx_rate_mbps, 0) : 0),
+  );
 
   let effectiveBandwidthMbps = toSafeNumber(route.effective_bandwidth_mbps, 0);
-  if (effectiveBandwidthMbps <= 0 && offeredBandwidthMbps > 0) {
+  if (effectiveBandwidthMbps <= 0 && !hasActualTxBandwidth && offeredBandwidthMbps > 0) {
     const packetLossRate = Math.min(Math.max(toSafeNumber(route.packet_loss_rate, 1), 0), 1);
     effectiveBandwidthMbps = offeredBandwidthMbps * Math.max(0, 1 - packetLossRate);
   }

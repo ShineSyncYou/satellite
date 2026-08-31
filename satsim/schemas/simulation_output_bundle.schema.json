@@ -59,7 +59,7 @@
           "type": "string",
           "description": "Schema version of the output package.",
           "examples": [
-            "1.3.0"
+            "1.4.0"
           ]
         },
         "output_mode": {
@@ -200,6 +200,15 @@
           "const": "Mbps"
         },
         "tx_rate_mbps": {
+          "const": "Mbps"
+        },
+        "requested_bandwidth_mbps": {
+          "const": "Mbps"
+        },
+        "actual_tx_bandwidth_mbps": {
+          "const": "Mbps"
+        },
+        "dropped_bandwidth_mbps": {
           "const": "Mbps"
         },
         "effective_bandwidth_mbps": {
@@ -566,7 +575,22 @@
         "effective_bandwidth_mbps": {
           "type": "number",
           "minimum": 0,
-          "description": "Per-route effective bandwidth derived from the access queue service model and reduced further when transient handover loss is active."
+          "description": "Per-route received bandwidth after actual sending rate is limited by link capacity and packet loss is applied."
+        },
+        "requested_bandwidth_mbps": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Bandwidth requested by this route before capacity allocation."
+        },
+        "actual_tx_bandwidth_mbps": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Actual bandwidth allocated to this route before end-to-end packet loss."
+        },
+        "dropped_bandwidth_mbps": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Requested bandwidth not allocated because of link capacity limits."
         },
         "latency_ms": {
           "type": "number",

@@ -242,14 +242,67 @@ class MultiGeoRoutingTests(unittest.TestCase):
             )
         ]
 
-        _, metrics = PerformanceLayer(rain_fade_intensity=0.15).compute(
+        used_edges, metrics = PerformanceLayer(rain_fade_intensity=0.15).compute(
             routes,
             gsl_edges,
             isl_edges,
             nodes=nodes,
         )
 
-        self.assertAlmostEqual(metrics[0].effective_bandwidth_mbps, 10.0)
+        self.assertEqual(metrics[0].requested_bandwidth_mbps, 25.0)
+        self.assertEqual(metrics[0].actual_tx_bandwidth_mbps, 10.0)
+        self.assertEqual(metrics[0].dropped_bandwidth_mbps, 15.0)
+        self.assertLess(metrics[0].effective_bandwidth_mbps, 10.0)
+        self.assertGreater(metrics[0].effective_bandwidth_mbps, 9.9)
+        isl_edge = next(edge for edge in used_edges if edge.edge_type == "ISL")
+        self.assertEqual(isl_edge.traffic, 10.0)
+        self.assertEqual(isl_edge.utilization, 1.0)
+
+    def test_shared_directional_link_uses_fair_capacity_allocation(self) -> None:
+        nodes = [
+            _node("AC_1", "aircraft", 0.0, 0.0, 10.0),
+            _node("AC_2", "aircraft", 0.0, 1.0, 10.0),
+            _node("sat_1_1", "satellite", 0.0, 0.0, 1000.0),
+            _node("sat_1_2", "satellite", 0.0, 10.0, 1000.0),
+            _node("GS_1", "ground_station", 0.0, 10.0, 0.0),
+        ]
+        gsl_edges = [
+            Edge("AC_1", "sat_1_1", "GSL", 1000.0, 100.0),
+            Edge("AC_2", "sat_1_1", "GSL", 1000.0, 100.0),
+            Edge("sat_1_2", "GS_1", "GSL", 1000.0, 100.0),
+        ]
+        isl_edges = [Edge("sat_1_1", "sat_1_2", "ISL", 2000.0, 10.0)]
+        routes = [
+            RoutePlan("AC_1", "GS_1", 25.0, ["AC_1", "sat_1_1", "sat_1_2", "GS_1"], True),
+            RoutePlan("AC_2", "GS_1", 25.0, ["AC_2", "sat_1_1", "sat_1_2", "GS_1"], True),
+        ]
+
+        used_edges, metrics = PerformanceLayer(rain_fade_intensity=0.0).compute(
+            routes,
+            gsl_edges,
+            isl_edges,
+            nodes=nodes,
+        )
+
+        self.assertEqual([metric.actual_tx_bandwidth_mbps for metric in metrics], [5.0, 5.0])
+        self.assertEqual([metric.dropped_bandwidth_mbps for metric in metrics], [20.0, 20.0])
+        shared_edge = next(edge for edge in used_edges if edge.edge_type == "ISL")
+        self.assertEqual(shared_edge.traffic, 10.0)
+        self.assertEqual(shared_edge.utilization, 1.0)
+
+    def test_opposite_directions_have_independent_capacity(self) -> None:
+        edge = Edge("A", "B", "ISL", 1000.0, 10.0)
+        routes = [
+            RoutePlan("A", "B", 25.0, ["A", "B"], True),
+            RoutePlan("B", "A", 25.0, ["B", "A"], True),
+        ]
+
+        used_edges, metrics = PerformanceLayer(rain_fade_intensity=0.0).compute(routes, [], [edge])
+
+        self.assertEqual([metric.actual_tx_bandwidth_mbps for metric in metrics], [10.0, 10.0])
+        self.assertEqual([metric.dropped_bandwidth_mbps for metric in metrics], [15.0, 15.0])
+        self.assertEqual(used_edges[0].traffic, 20.0)
+        self.assertEqual(used_edges[0].utilization, 1.0)
 
 
 if __name__ == "__main__":
