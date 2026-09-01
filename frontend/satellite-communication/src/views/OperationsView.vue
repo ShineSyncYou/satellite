@@ -155,7 +155,7 @@
         </div>
         <div class="entity-stat-card">
           <span class="entity-stat-label">{{ selectedEntityInfo.routeCountLabel }}</span>
-          <span class="entity-stat-value">{{ selectedEntityInfo.routeCount }}</span>
+          <span class="entity-stat-value">{{ selectedEntityInfo.routeCountText }}</span>
         </div>
         <div v-if="selectedEntityInfo.showRequestedBandwidth" class="entity-stat-card">
           <span class="entity-stat-label">请求带宽</span>
@@ -183,6 +183,18 @@
             <span>{{ link.type }}</span>
             <span>{{ link.txRateText }}</span>
             <span>{{ link.utilizationText }}</span>
+          </li>
+        </ul>
+      </div>
+
+      <div v-if="selectedEntityInfo.routeDetails.length > 0" class="entity-links entity-routes">
+        <h4>路由明细（发送带宽 / 时延）</h4>
+        <ul>
+          <li v-for="routeDetail in selectedEntityInfo.routeDetails" :key="routeDetail.id">
+            <span>{{ routeDetail.source }}</span>
+            <span>{{ routeDetail.target }}</span>
+            <span>{{ routeDetail.txRateText }}</span>
+            <span>{{ routeDetail.latencyText }}</span>
           </li>
         </ul>
       </div>
@@ -586,6 +598,15 @@ function buildSelectedEntityInfo(entityId) {
       utilizationText: Number.isFinite(utilization) ? `${(utilization * 100).toFixed(1)}%` : "--",
     };
   });
+  const routeDetails = routes.map((route) => ({
+    id: `${route.source} → ${route.target}`,
+    source: route.source || "--",
+    target: route.target || "--",
+    txRateText: formatFixed(routeActualTxBandwidth(route), 1, " Mbps"),
+    latencyText: Number.isFinite(Number(route.latency_ms)) && Number(route.latency_ms) >= 0
+      ? `${Number(route.latency_ms).toFixed(2)} ms`
+      : "--",
+  }));
 
   return {
     id: entityId,
@@ -602,7 +623,8 @@ function buildSelectedEntityInfo(entityId) {
     relativeTimeText: `${latestRelativeTimeS.toFixed(2)} s`,
     linkCount: flowStats.physicalLinks.length,
     routeCount: nodeType === "ground_station" ? connectedAircraftIds.size : routes.length,
-    routeCountLabel: nodeType === "ground_station" ? "连接飞机数量" : "参与路由",
+    routeCountText: String(nodeType === "ground_station" ? connectedAircraftIds.size : routes.length),
+    routeCountLabel: nodeType === "ground_station" ? "连接飞机数量" : "承载业务路由",
     bandwidthLabel: nodeType === "ground_station" ? "当前有效带宽" : "当前发送带宽",
     linkMetricLabel: nodeType === "ground_station" ? "接收带宽" : "发送带宽",
     showRequestedBandwidth: nodeType === "aircraft" && requestedBandwidth != null,
@@ -611,6 +633,7 @@ function buildSelectedEntityInfo(entityId) {
     utilizationText: Number.isFinite(flowStats.utilization) ? `${(flowStats.utilization * 100).toFixed(1)}%` : "--",
     latencyText: Number.isFinite(avgLatencyMs) ? `${avgLatencyMs.toFixed(2)} ms` : "--",
     linkDetails,
+    routeDetails,
   };
 }
 
@@ -2008,7 +2031,7 @@ onBeforeUnmount(() => {
   top: 84px;
   left: 12px;
   width: min(360px, calc(100vw - 24px));
-  max-height: calc(100vh - 110px);
+  max-height: calc(100vh - 156px);
   overflow: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(122, 170, 210, 0.42) rgba(9, 20, 36, 0.08);
@@ -2176,14 +2199,20 @@ onBeforeUnmount(() => {
 
 .entity-links li {
   display: grid;
-  grid-template-columns: 1.1fr 0.7fr 0.9fr 0.8fr;
-  gap: 6px;
+  grid-template-columns: 1.1fr 0.72fr 1.15fr 1fr;
+  column-gap: 8px;
+  align-items: center;
   font-size: 12px;
   color: #dbeafe;
+  white-space: nowrap;
   padding: 6px 8px;
   border-radius: 7px;
   border: 1px solid rgba(125, 211, 252, 0.16);
   background: rgba(10, 28, 49, 0.46);
+}
+
+.entity-routes {
+  margin-top: 12px;
 }
 
 @media (max-width: 1400px) {
@@ -2205,7 +2234,7 @@ onBeforeUnmount(() => {
 
   .entity-info-panel {
     top: 126px;
-    max-height: calc(100vh - 146px);
+    max-height: calc(100vh - 198px);
   }
 
   .toolbar-actions {

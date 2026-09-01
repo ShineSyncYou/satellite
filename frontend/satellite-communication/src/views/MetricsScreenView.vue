@@ -49,11 +49,11 @@
 
         <section class="column middle-column">
           <article class="panel list-panel">
-            <header class="panel-header"><h2>参与路由卫星</h2><span>{{ satelliteRows.length }} 颗</span></header>
-            <div v-if="satelliteRows.length === 0" class="empty-tip">当前时刻无参与路由卫星</div>
+            <header class="panel-header"><h2>承载业务卫星</h2><span>{{ satelliteRows.length }} 颗</span></header>
+            <div v-if="satelliteRows.length === 0" class="empty-tip">当前时刻无承载业务卫星</div>
             <div v-else class="entity-list">
               <article v-for="sat in satelliteRows" :key="sat.id" class="entity-card sat-card">
-                <div class="entity-head"><h3>{{ sat.id }}</h3><span class="tag">{{ sat.linkCount }} 链路连接数量</span></div>
+                <div class="entity-head"><h3>{{ sat.id }}</h3><span class="tag">{{ sat.routeCount }} 条承载业务路由</span></div>
                 <div class="entity-grid">
                   <p><span>位置</span><strong>{{ sat.positionText }}</strong></p>
                   <p><span>高度</span><strong>{{ sat.altitudeText }}</strong></p>
