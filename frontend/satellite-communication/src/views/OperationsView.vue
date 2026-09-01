@@ -74,6 +74,13 @@
       <span>相机高度</span>
       <strong>{{ cameraHeightText }}</strong>
     </div>
+    <aside v-if="showLinkCapacityPanel" class="link-capacity-panel" aria-label="链路容量">
+      <span class="link-capacity-title">链路容量</span>
+      <div v-for="item in linkCapacityRows" :key="item.label" class="link-capacity-row">
+        <span>{{ item.label }}</span>
+        <strong>{{ item.value }}</strong>
+      </div>
+    </aside>
 
     <aside v-if="aircraftRoutes.length > 0" class="aircraft-overview-panel" aria-label="飞机列表">
       <div class="aircraft-overview-heading">
@@ -252,6 +259,7 @@ const sceneLoadError = ref("");
 const sceneEmpty = ref(false);
 const coverageWarning = ref("");
 const cameraHeightText = ref("--");
+const scenarioLinkCapacities = ref(null);
 const playbackCurrentTimeS = ref(0);
 const playbackDurationS = ref(0);
 const playbackSeekPreviewS = ref(0);
@@ -263,6 +271,20 @@ const playbackProgressValue = computed(
 );
 const playbackCurrentTimeText = computed(() => formatPlaybackTime(playbackProgressValue.value));
 const playbackDurationText = computed(() => formatPlaybackTime(playbackDurationS.value));
+const linkCapacityRows = computed(() => {
+  const capacities = scenarioLinkCapacities.value;
+  const formatCapacity = (value) => (
+    Number.isFinite(Number(value)) ? `${Number(value).toFixed(1)} Mbps` : "--"
+  );
+  return [
+    { label: "LEO 地空", value: formatCapacity(capacities?.leo_gsl_mbps) },
+    { label: "GEO 地空", value: formatCapacity(capacities?.geo_gsl_mbps) },
+    { label: "星间", value: formatCapacity(capacities?.isl_mbps) },
+  ];
+});
+const showLinkCapacityPanel = computed(() => (
+  Boolean(currentScenarioRuntime.value) && !sceneLoading.value && !sceneEmpty.value
+));
 
 
 // ============= Cesium 相关 =============
@@ -494,22 +516,16 @@ function collectNodeFlowStats(entityId, nodeType, routes, links) {
   }
 
   const activeLinks = [...flowByLinkId.values()];
-  const detailLinks = links
-    .map((link) => flowByLinkId.get(link.id) || { ...link, actualTx: 0 })
-    .sort((left, right) => (
-      right.actualTx - left.actualTx
-      || left.peer.localeCompare(right.peer)
-    ));
-  const totalCapacity = activeLinks.reduce(
+  const physicalLinks = activeLinks.filter((link) => link.actualTx > 1e-9);
+  const totalCapacity = physicalLinks.reduce(
     (sum, link) => sum + (Number.isFinite(link.capacity) ? link.capacity : 0),
     0,
   );
-  const totalActualTx = activeLinks.reduce((sum, link) => sum + link.actualTx, 0);
+  const totalActualTx = physicalLinks.reduce((sum, link) => sum + link.actualTx, 0);
 
   return {
     bandwidthTotal,
-    activeLinks,
-    detailLinks,
+    physicalLinks,
     utilization: totalCapacity > 0 ? totalActualTx / totalCapacity : NaN,
   };
 }
@@ -557,9 +573,7 @@ function buildSelectedEntityInfo(entityId) {
     }
   }
 
-  const visibleLinks = nodeType === "ground_station"
-    ? flowStats.activeLinks
-    : flowStats.detailLinks;
+  const visibleLinks = flowStats.physicalLinks;
   const linkDetails = visibleLinks.slice(0, 8).map((link) => {
     const utilization = Number.isFinite(link.capacity) && link.capacity > 0
       ? link.actualTx / link.capacity
@@ -586,7 +600,7 @@ function buildSelectedEntityInfo(entityId) {
     latitudeText: location ? `${location.latDeg.toFixed(4)}°` : "--",
     altitudeText: location ? `${location.altKm.toFixed(2)} km` : "--",
     relativeTimeText: `${latestRelativeTimeS.toFixed(2)} s`,
-    linkCount: nodeType === "ground_station" ? flowStats.activeLinks.length : links.length,
+    linkCount: flowStats.physicalLinks.length,
     routeCount: nodeType === "ground_station" ? connectedAircraftIds.size : routes.length,
     routeCountLabel: nodeType === "ground_station" ? "连接飞机数量" : "参与路由",
     bandwidthLabel: nodeType === "ground_station" ? "当前有效带宽" : "当前发送带宽",
@@ -1312,6 +1326,7 @@ function destroyAllScenes() {
   playbackCurrentTimeS.value = 0;
   playbackDurationS.value = 0;
   playbackSeekPreviewS.value = 0;
+  scenarioLinkCapacities.value = null;
   isPlaybackScrubbing.value = false;
   aircraftRoutes.value = [];
   focusedAircraftId.value = "";
@@ -1386,6 +1401,7 @@ async function initializeMainScene() {
     },
   });
   playbackDurationS.value = Math.max(0, Number(mainScenarioHandle.bundle.durationSeconds) || 0);
+  scenarioLinkCapacities.value = mainScenarioHandle.bundle.metadata?.link_capacities || null;
   playbackCurrentTimeS.value = clampPlaybackTime(latestRelativeTimeS);
   const visibleAircraftIds = [...mainScenarioHandle.bundle.visibleNodeIds]
     .filter((nodeId) => mainScenarioHandle.bundle.nodeTypeMap.get(nodeId) === "aircraft")
@@ -1716,6 +1732,45 @@ onBeforeUnmount(() => {
   font-size: 14px;
   font-variant-numeric: tabular-nums;
   text-align: right;
+}
+
+.link-capacity-panel {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px 7px 9px;
+  border-left: 2px solid rgba(78, 169, 255, 0.88);
+  border-radius: 4px;
+  background: rgba(4, 16, 28, 0.72);
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+  user-select: none;
+}
+
+.link-capacity-title {
+  flex: 0 0 auto;
+  color: #9fb6c9;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.link-capacity-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: #9fb6c9;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.link-capacity-row strong {
+  color: #e7f5ff;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
 }
 
 .playback-group {

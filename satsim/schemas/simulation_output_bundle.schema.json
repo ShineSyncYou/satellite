@@ -59,7 +59,7 @@
           "type": "string",
           "description": "Schema version of the output package.",
           "examples": [
-            "1.4.0"
+            "1.5.0"
           ]
         },
         "output_mode": {
@@ -109,6 +109,9 @@
         "beam": {
           "$ref": "#/$defs/BeamConfig"
         },
+        "link_capacities": {
+          "$ref": "#/$defs/LinkCapacities"
+        },
         "constellation": {
           "$ref": "#/$defs/ConstellationInfo"
         },
@@ -136,6 +139,32 @@
           "minimum": 0,
           "exclusiveMaximum": 90,
           "description": "Effective GEO satellite antenna half-angle in degrees. Falls back to sat_antenna_angle when geo_sat_antenna_angle is omitted."
+        }
+      }
+    },
+    "LinkCapacities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "leo_gsl_mbps",
+        "geo_gsl_mbps",
+        "isl_mbps"
+      ],
+      "properties": {
+        "leo_gsl_mbps": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Configured LEO ground-to-satellite link capacity in Mbps."
+        },
+        "geo_gsl_mbps": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Configured GEO ground-to-satellite link capacity in Mbps."
+        },
+        "isl_mbps": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Configured inter-satellite link capacity in Mbps."
         }
       }
     },

@@ -10,7 +10,7 @@ from .config import PreparedSimulationAssets, SimulationConfig, load_simulation_
 from .core import AccessLayer, PerformanceLayer, PhysicalSpaceEngine, RoutingEngine
 from .core.handover_penalty import AccessHandoverPenaltyTracker, HandoverPenaltyPolicy
 
-SCHEMA_VERSION = "1.4.0"
+SCHEMA_VERSION = "1.5.0"
 
 
 def _normalize_relative_time(value: float) -> int | float:
@@ -206,6 +206,14 @@ def _build_metadata(config: SimulationConfig, assets: PreparedSimulationAssets) 
                 else config.sat_antenna_angle,
                 6,
             ),
+        },
+        "link_capacities": {
+            "leo_gsl_mbps": _round_float(config.bw_gsl, 6),
+            "geo_gsl_mbps": _round_float(
+                config.bw_geo_gsl if config.bw_geo_gsl is not None else config.bw_gsl,
+                6,
+            ),
+            "isl_mbps": _round_float(config.bw_isl, 6),
         },
         "constellation": {
             "tle_file": config.tle_file.name,
