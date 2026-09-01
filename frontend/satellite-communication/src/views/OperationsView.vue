@@ -1407,7 +1407,7 @@ async function initializeMainScene() {
     // 主地图未选中卫星使用批量化 SVG 代理；高精 tdrs.glb 仍由既有详情视图按需加载。
     showSatelliteModel: false,
     satelliteModelPoolEnabled: false,
-    maxAircraft: 10,
+    maxAircraft: 30,
     maxGroundStations: 1,
     showTopologyLinks: topologyLinksVisible.value,
     playbackMultiplier: playbackMultiplier.value,
