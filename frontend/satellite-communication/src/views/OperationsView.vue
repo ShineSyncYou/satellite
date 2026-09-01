@@ -192,7 +192,7 @@
         <ul>
           <li v-for="routeDetail in selectedEntityInfo.routeDetails" :key="routeDetail.id">
             <span>{{ routeDetail.source }}</span>
-            <span>{{ routeDetail.target }}</span>
+            <span>{{ routeDetail.networkText }}</span>
             <span>{{ routeDetail.txRateText }}</span>
             <span>{{ routeDetail.latencyText }}</span>
           </li>
@@ -496,6 +496,18 @@ function routeRequestedBandwidth(route) {
   return routeActualTxBandwidth(route);
 }
 
+function routeAccessNetwork(route, nodeTypeMap) {
+  const path = Array.isArray(route?.path) ? route.path : [];
+  const aircraftIndex = path.findIndex((nodeId) => nodeTypeMap.get(nodeId) === "aircraft");
+  const accessSatelliteId = aircraftIndex >= 0
+    ? [path[aircraftIndex + 1], path[aircraftIndex - 1]].find((nodeId) => nodeTypeMap.get(nodeId) === "satellite")
+    : "";
+  if (!accessSatelliteId) {
+    return "--";
+  }
+  return String(accessSatelliteId).startsWith("sat_geo_") ? "GEO" : "LEO";
+}
+
 function collectNodeFlowStats(entityId, nodeType, routes, links) {
   const linkByPeer = new Map(links.map((link) => [link.peer, link]));
   const flowByLinkId = new Map();
@@ -601,7 +613,7 @@ function buildSelectedEntityInfo(entityId) {
   const routeDetails = routes.map((route) => ({
     id: `${route.source} → ${route.target}`,
     source: route.source || "--",
-    target: route.target || "--",
+    networkText: routeAccessNetwork(route, bundle.nodeTypeMap),
     txRateText: formatFixed(routeActualTxBandwidth(route), 1, " Mbps"),
     latencyText: Number.isFinite(Number(route.latency_ms)) && Number(route.latency_ms) >= 0
       ? `${Number(route.latency_ms).toFixed(2)} ms`
