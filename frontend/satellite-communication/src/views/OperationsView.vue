@@ -149,11 +149,11 @@
       </div>
 
       <div class="entity-stats">
-        <div class="entity-stat-card">
+        <div v-if="selectedEntityInfo.showLinkCount" class="entity-stat-card">
           <span class="entity-stat-label">关联链路</span>
           <span class="entity-stat-value">{{ selectedEntityInfo.linkCount }}</span>
         </div>
-        <div class="entity-stat-card">
+        <div v-if="selectedEntityInfo.showRouteCount" class="entity-stat-card">
           <span class="entity-stat-label">{{ selectedEntityInfo.routeCountLabel }}</span>
           <span class="entity-stat-value">{{ selectedEntityInfo.routeCountText }}</span>
         </div>
@@ -187,7 +187,7 @@
         </ul>
       </div>
 
-      <div v-if="selectedEntityInfo.routeDetails.length > 0" class="entity-links entity-routes">
+      <div v-if="selectedEntityInfo.showRouteDetails && selectedEntityInfo.routeDetails.length > 0" class="entity-links entity-routes">
         <h4>路由明细（发送带宽 / 时延）</h4>
         <ul>
           <li v-for="routeDetail in selectedEntityInfo.routeDetails" :key="routeDetail.id">
@@ -622,9 +622,12 @@ function buildSelectedEntityInfo(entityId) {
     altitudeText: location ? `${location.altKm.toFixed(2)} km` : "--",
     relativeTimeText: `${latestRelativeTimeS.toFixed(2)} s`,
     linkCount: flowStats.physicalLinks.length,
+    showLinkCount: nodeType !== "aircraft",
     routeCount: nodeType === "ground_station" ? connectedAircraftIds.size : routes.length,
     routeCountText: String(nodeType === "ground_station" ? connectedAircraftIds.size : routes.length),
     routeCountLabel: nodeType === "ground_station" ? "连接飞机数量" : "承载业务路由",
+    showRouteCount: nodeType !== "aircraft",
+    showRouteDetails: nodeType !== "aircraft",
     bandwidthLabel: nodeType === "ground_station" ? "当前有效带宽" : "当前发送带宽",
     linkMetricLabel: nodeType === "ground_station" ? "接收带宽" : "发送带宽",
     showRequestedBandwidth: nodeType === "aircraft" && requestedBandwidth != null,
