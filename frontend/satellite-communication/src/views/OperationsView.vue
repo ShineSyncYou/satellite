@@ -2034,7 +2034,7 @@ onBeforeUnmount(() => {
   top: 84px;
   left: 12px;
   width: min(360px, calc(100vw - 24px));
-  max-height: calc(100vh - 156px);
+  height: min(744px, calc(100vh - 156px));
   overflow: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(122, 170, 210, 0.42) rgba(9, 20, 36, 0.08);
@@ -2237,7 +2237,7 @@ onBeforeUnmount(() => {
 
   .entity-info-panel {
     top: 126px;
-    max-height: calc(100vh - 198px);
+    height: min(744px, calc(100vh - 198px));
   }
 
   .toolbar-actions {
