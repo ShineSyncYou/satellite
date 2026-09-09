@@ -262,6 +262,7 @@ const selectedEntityId = ref("");                                     // 当前�
 const aircraftRoutes = ref([]);
 const focusedAircraftId = ref("");
 const modelViewerReady = ref(typeof window !== "undefined" && Boolean(window.customElements?.get("model-viewer")));
+const AIRCRAFT_MODEL_LOAD_TIMEOUT_MS = 30000;
 const modelPreviewError = ref(false);
 const isSpeedMenuOpen = ref(false);
 const currentScenarioRuntime = ref(null);
@@ -1310,6 +1311,70 @@ function setInitialOverview() {
   });
 }
 
+/**
+ * 等待主屏中所有飞机实体的 GLB 完成解析并可渲染。
+ * DataSourceDisplay 会将模型仍在加载的实体标记为 PENDING，只有模型首帧就绪后才返回 DONE。
+ */
+function waitForAircraftModelsReady() {
+  if (!viewer || viewer.isDestroyed() || !mainScenarioHandle) {
+    return Promise.reject(new Error("飞机模型加载前场景已被销毁。"));
+  }
+
+  const aircraftEntities = [...mainScenarioHandle.bundle.visibleNodeIds]
+    .filter((nodeId) => mainScenarioHandle.bundle.nodeTypeMap.get(nodeId) === "aircraft")
+    .map((nodeId) => mainScenarioHandle.entityLookup.get(nodeId))
+    .filter(Boolean);
+  if (aircraftEntities.length === 0) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve, reject) => {
+    const boundingSphere = new Cesium.BoundingSphere();
+    let settled = false;
+    let timeoutId = 0;
+
+    const finish = (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      viewer?.scene?.postRender.removeEventListener(checkReady);
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    };
+
+    const checkReady = () => {
+      if (!viewer || viewer.isDestroyed()) {
+        finish(new Error("飞机模型加载期间场景已被销毁。"));
+        return;
+      }
+
+      const states = aircraftEntities.map((entity) => viewer.dataSourceDisplay.getBoundingSphere(
+        entity,
+        false,
+        boundingSphere,
+      ));
+      if (states.some((state) => state === Cesium.BoundingSphereState.FAILED)) {
+        finish(new Error("飞机模型加载失败，请检查 /pictures/aircraft-v1.glb。"));
+        return;
+      }
+      if (states.every((state) => state === Cesium.BoundingSphereState.DONE)) {
+        finish();
+        return;
+      }
+      viewer.scene.requestRender();
+    };
+
+    timeoutId = window.setTimeout(() => {
+      finish(new Error("飞机模型加载超时（30 秒）。"));
+    }, AIRCRAFT_MODEL_LOAD_TIMEOUT_MS);
+    viewer.scene.postRender.addEventListener(checkReady);
+    viewer.scene.requestRender();
+  });
+}
+
 
 /**
  * 打开链路参数副屏
@@ -1438,6 +1503,8 @@ async function initializeMainScene() {
       }
     },
   });
+  sceneLoadingText.value = "正在加载飞机模型...";
+  await waitForAircraftModelsReady();
   playbackDurationS.value = Math.max(0, Number(mainScenarioHandle.bundle.durationSeconds) || 0);
   scenarioLinkCapacities.value = mainScenarioHandle.bundle.metadata?.link_capacities || null;
   playbackCurrentTimeS.value = clampPlaybackTime(latestRelativeTimeS);
