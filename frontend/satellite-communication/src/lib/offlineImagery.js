@@ -1,4 +1,5 @@
 import * as Cesium from "cesium";
+import { AmapTileDiscardPolicy } from "./amapTileDiscardPolicy.js";
 
 export const OFFLINE_IMAGERY_MAX_LEVEL = 6;
 export const AMAP_GLOBAL_IMAGERY_MAX_LEVEL = 7;
@@ -7,6 +8,10 @@ export const AMAP_ANNOTATION_MAX_LEVEL = 8;
 
 // 高等级卫星影像仅覆盖中国区域；全球层在实测稳定的 7 级停止后由 Cesium 放大父瓦片。
 const AMAP_CHINA_HIGH_RES_RECTANGLE = Cesium.Rectangle.fromDegrees(72, 16, 138, 55);
+
+// 全球层和高清层都检查混合缺图瓦片；只丢弃边界问题瓦片，由 Cesium 裁切有效父级。
+// 共用策略使图片检查结果可回收，不新增网络探测或逐帧图层重建。
+const amapTileDiscardPolicy = new AmapTileDiscardPolicy(Cesium.getImagePixels);
 
 const AMAP_PROBE_URLS = [
   "https://webst01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=6&x=1&y=1&z=1",
@@ -52,6 +57,7 @@ function createAmapBaseProvider({ maximumLevel, rectangle } = {}) {
     url: "https://webst0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=6&x={x}&y={y}&z={z}",
     subdomains: ["1", "2", "3", "4"],
     maximumLevel,
+    tileDiscardPolicy: amapTileDiscardPolicy,
     ...(rectangle ? { rectangle } : {}),
   });
 }
