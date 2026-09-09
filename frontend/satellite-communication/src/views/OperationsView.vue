@@ -625,7 +625,7 @@ function buildSelectedEntityInfo(entityId) {
     nodeType,
     typeLabel: nodeTypeLabel(nodeType),
     modelSrc: nodeType === "aircraft"
-      ? "/pictures/Airplane.glb"
+      ? "/pictures/airplane%203d%20model_Clone1.glb"
       : nodeType === "ground_station"
       ? "/pictures/ground-station.glb"
       : "/pictures/tdrs.glb",
@@ -924,7 +924,7 @@ function bindSceneFillLight() {
   const light = new Cesium.DirectionalLight({
     direction: Cesium.Cartesian3.clone(viewer.camera.directionWC),
     color: Cesium.Color.fromCssColorString("#f4f8ff"),
-    intensity: 1.8,
+    intensity: 3.4,
   });
   viewer.scene.light = light;
 

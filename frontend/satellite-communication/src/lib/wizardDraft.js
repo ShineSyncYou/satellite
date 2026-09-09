@@ -12,6 +12,7 @@ function defaultDraft() {
     title: "",
     tleText: "",
     tleFileName: "",
+    normalizeIrregularTle: false,
     satMappingStrategy: "auto-walker-name",
     tleValidation: {
       isValid: false,

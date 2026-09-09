@@ -158,6 +158,25 @@ export function validateAutoWalkerTle(tleText) {
   }
 }
 
+export function validateTleCatalog(tleText) {
+  try {
+    const satellites = parseTleCatalog(tleText);
+    return {
+      isValid: true,
+      message: `已识别 ${satellites.length} 颗卫星，将在提交时自动规范化名称和轨道面编号。`,
+      satelliteCount: satellites.length,
+      sampleNames: satellites.slice(0, 5).map((item) => item.name),
+    };
+  } catch (error) {
+    return {
+      isValid: false,
+      message: error instanceof Error ? error.message : "TLE 校验失败。",
+      satelliteCount: 0,
+      sampleNames: [],
+    };
+  }
+}
+
 function buildAutoSatMappingFromCatalog(satellites) {
   const mapping = {};
   const names = new Set();
@@ -505,6 +524,7 @@ export function buildWizardManifest(draft) {
     title: draft.title || "未命名仿真任务",
     tleText: draft.tleText,
     tleFileName: draft.tleFileName || "uploaded.tle",
+    normalizeIrregularTle: Boolean(draft.normalizeIrregularTle),
     satMappingStrategy: draft.satMappingStrategy || "auto-walker-name",
     tleValidation: draft.tleValidation,
     groundStation: {

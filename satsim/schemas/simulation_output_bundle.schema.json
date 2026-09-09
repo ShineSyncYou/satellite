@@ -120,28 +120,6 @@
         }
       }
     },
-    "BeamConfig": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "sat_antenna_angle_deg",
-        "geo_sat_antenna_angle_deg"
-      ],
-      "properties": {
-        "sat_antenna_angle_deg": {
-          "type": "number",
-          "minimum": 0,
-          "exclusiveMaximum": 90,
-          "description": "Effective LEO satellite antenna half-angle read from sat_antenna_angle, in degrees."
-        },
-        "geo_sat_antenna_angle_deg": {
-          "type": "number",
-          "minimum": 0,
-          "exclusiveMaximum": 90,
-          "description": "Effective GEO satellite antenna half-angle in degrees. Falls back to sat_antenna_angle when geo_sat_antenna_angle is omitted."
-        }
-      }
-    },
     "LinkCapacities": {
       "type": "object",
       "additionalProperties": false,
@@ -165,6 +143,28 @@
           "type": "number",
           "minimum": 0,
           "description": "Configured inter-satellite link capacity in Mbps."
+        }
+      }
+    },
+    "BeamConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sat_antenna_angle_deg",
+        "geo_sat_antenna_angle_deg"
+      ],
+      "properties": {
+        "sat_antenna_angle_deg": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 90,
+          "description": "Effective LEO satellite antenna half-angle read from sat_antenna_angle, in degrees."
+        },
+        "geo_sat_antenna_angle_deg": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 90,
+          "description": "Effective GEO satellite antenna half-angle in degrees. Falls back to sat_antenna_angle when geo_sat_antenna_angle is omitted."
         }
       }
     },

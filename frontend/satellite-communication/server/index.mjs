@@ -43,6 +43,9 @@ const AUTH_COOKIE_NAME = "satsim_admin";
 const AUTH_TOKEN_TTL_MS = 1000 * 60 * 60 * 12;
 const IMMUTABLE_ASSET_CACHE_CONTROL = "public, max-age=31536000, immutable";
 const SCENARIO_ASSET_NAMES = Object.freeze(["bundle.json", "render.czml"]);
+const IRREGULAR_TLE_NAME_PREFIX = "QIANFAN";
+const IRREGULAR_TLE_MIN_PLANE_SIZE = 6;
+const IRREGULAR_TLE_ISL_MAX_DISTANCE_KM = 3000;
 const COMPRESSION_VARIANTS = Object.freeze([
   {
     encoding: "br",
@@ -624,7 +627,33 @@ function assertValidGroundStationCoordinate(manifest) {
   }
 }
 
-function buildSampleConfig(manifest) {
+function buildNormalizedSatMapping(report) {
+  if (!Array.isArray(report?.renames) || report.renames.length === 0) {
+    throw new Error("TLE 规范化后没有可用于仿真的卫星。");
+  }
+
+  const mapping = {};
+  for (const record of report.renames) {
+    const name = String(record?.new_name || "");
+    const plane = Number(record?.plane);
+    const slot = Number(record?.slot);
+    if (!name || !Number.isSafeInteger(plane) || plane < 1 || !Number.isSafeInteger(slot) || slot < 1) {
+      throw new Error("TLE 规范化报告缺少有效的卫星名称或轨道面编号。");
+    }
+    mapping[name] = `sat_${plane}_${slot}`;
+  }
+  return mapping;
+}
+
+function getNormalizedSimulationStartTime(report) {
+  const startTime = String(report?.reference_time || "");
+  if (!startTime || Number.isNaN(Date.parse(startTime))) {
+    throw new Error("TLE 规范化报告缺少有效的共同参考时刻。");
+  }
+  return startTime;
+}
+
+function buildSampleConfig(manifest, overrides = {}) {
   const preview = manifest?.sampleConfigPreview;
   if (!preview || typeof preview !== "object") {
     throw new Error("Manifest is missing sampleConfigPreview.");
@@ -637,13 +666,21 @@ function buildSampleConfig(manifest) {
   }
   assertValidGroundStationCoordinate(manifest);
 
+  const { sat_mapping_error: ignoredSatMappingError, ...configPreview } = preview;
+  void ignoredSatMappingError;
   return {
-    ...preview,
+    ...configPreview,
     // 统一由服务端生成标准 ISO 时间，避免不同客户端提交的时间字符串格式不兼容。
-    start_time: new Date().toISOString(),
-    tle_file: "input.tle",
+    start_time: overrides.startTime || new Date().toISOString(),
+    tle_file: overrides.tleFile || "input.tle",
+    sat_mapping: overrides.satMapping || configPreview.sat_mapping,
     isl_cross_plane_high_latitude_limit_deg: 70,
     isl_block_seam_cross_plane: true,
+    ...(overrides.islMode ? { isl_mode: overrides.islMode } : {}),
+    ...(overrides.islMaxDistanceKm != null
+      ? { isl_max_distance_km: overrides.islMaxDistanceKm }
+      : {}),
+    ...(overrides.islRequireLos != null ? { isl_require_los: overrides.islRequireLos } : {}),
   };
 }
 
@@ -734,6 +771,8 @@ async function executeSimulationTask(task) {
   const pythonExecutable = resolvePythonExecutable();
   const dir = taskDir(task.taskId);
   const tlePath = path.join(dir, "input.tle");
+  const normalizedTlePath = path.join(dir, "normalized.tle");
+  const normalizedReportPath = path.join(dir, "normalized_report.json");
   const manifestPath = path.join(dir, "manifest.json");
   const sampleConfigPath = path.join(dir, "sample_config.json");
   const rawBundlePath = path.join(dir, "simulation_bundle.json");
@@ -751,7 +790,38 @@ async function executeSimulationTask(task) {
     await fs.writeFile(manifestPath, JSON.stringify(task.manifest, null, 2), "utf-8");
     await fs.writeFile(tlePath, `${String(task.manifest.tleText || "").trim()}\n`, "utf-8");
 
-    const sampleConfig = buildSampleConfig(task.manifest);
+    let sampleConfig;
+    let normalizationLog = "";
+    if (task.manifest?.normalizeIrregularTle) {
+      const normalizationResult = await runCommand(
+        pythonExecutable,
+        [
+          "data/normalize_tle_names.py",
+          tlePath,
+          "--output",
+          normalizedTlePath,
+          "--report",
+          normalizedReportPath,
+          "--name-prefix",
+          IRREGULAR_TLE_NAME_PREFIX,
+          "--min-plane-size",
+          String(IRREGULAR_TLE_MIN_PLANE_SIZE),
+        ],
+        { cwd: SATSIM_ROOT },
+      );
+      const normalizationReport = JSON.parse(await fs.readFile(normalizedReportPath, "utf-8"));
+      sampleConfig = buildSampleConfig(task.manifest, {
+        tleFile: path.basename(normalizedTlePath),
+        satMapping: buildNormalizedSatMapping(normalizationReport),
+        startTime: getNormalizedSimulationStartTime(normalizationReport),
+        islMode: "dynamic-nearest",
+        islMaxDistanceKm: IRREGULAR_TLE_ISL_MAX_DISTANCE_KM,
+        islRequireLos: true,
+      });
+      normalizationLog = [normalizationResult.stdout, normalizationResult.stderr].filter(Boolean).join("\n").trim();
+    } else {
+      sampleConfig = buildSampleConfig(task.manifest);
+    }
     await fs.writeFile(sampleConfigPath, JSON.stringify(sampleConfig, null, 2), "utf-8");
 
     const simulationResult = await runCommand(
@@ -764,6 +834,7 @@ async function executeSimulationTask(task) {
       logs: {
         ...(task.logs || {}),
         simulation: [simulationResult.stdout, simulationResult.stderr].filter(Boolean).join("\n").trim(),
+        ...(normalizationLog ? { normalization: normalizationLog } : {}),
         sampleConfig: JSON.stringify(sampleConfig, null, 2),
       },
     });

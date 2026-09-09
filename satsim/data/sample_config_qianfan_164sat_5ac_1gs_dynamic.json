@@ -1,0 +1,355 @@
+{
+  "start_time": "2026-08-26T23:12:38Z",
+  "duration": 600,
+  "time_step": 30,
+  "event_sampling_enabled": true,
+  "event_sampling_min_step": 5.0,
+  "tle_file": "gp_dynamic_ready.tle",
+  "sat_mapping": {
+    "QIANFAN_1_1": "sat_1_1",
+    "QIANFAN_1_2": "sat_1_2",
+    "QIANFAN_1_3": "sat_1_3",
+    "QIANFAN_1_4": "sat_1_4",
+    "QIANFAN_1_5": "sat_1_5",
+    "QIANFAN_1_6": "sat_1_6",
+    "QIANFAN_1_7": "sat_1_7",
+    "QIANFAN_1_8": "sat_1_8",
+    "QIANFAN_1_9": "sat_1_9",
+    "QIANFAN_1_10": "sat_1_10",
+    "QIANFAN_1_11": "sat_1_11",
+    "QIANFAN_1_12": "sat_1_12",
+    "QIANFAN_1_13": "sat_1_13",
+    "QIANFAN_1_14": "sat_1_14",
+    "QIANFAN_1_15": "sat_1_15",
+    "QIANFAN_1_16": "sat_1_16",
+    "QIANFAN_1_17": "sat_1_17",
+    "QIANFAN_1_18": "sat_1_18",
+    "QIANFAN_1_19": "sat_1_19",
+    "QIANFAN_1_20": "sat_1_20",
+    "QIANFAN_1_21": "sat_1_21",
+    "QIANFAN_1_22": "sat_1_22",
+    "QIANFAN_1_23": "sat_1_23",
+    "QIANFAN_1_24": "sat_1_24",
+    "QIANFAN_1_25": "sat_1_25",
+    "QIANFAN_1_26": "sat_1_26",
+    "QIANFAN_1_27": "sat_1_27",
+    "QIANFAN_1_28": "sat_1_28",
+    "QIANFAN_1_29": "sat_1_29",
+    "QIANFAN_1_30": "sat_1_30",
+    "QIANFAN_1_31": "sat_1_31",
+    "QIANFAN_1_32": "sat_1_32",
+    "QIANFAN_2_1": "sat_2_1",
+    "QIANFAN_2_2": "sat_2_2",
+    "QIANFAN_2_3": "sat_2_3",
+    "QIANFAN_2_4": "sat_2_4",
+    "QIANFAN_2_5": "sat_2_5",
+    "QIANFAN_2_6": "sat_2_6",
+    "QIANFAN_2_7": "sat_2_7",
+    "QIANFAN_2_8": "sat_2_8",
+    "QIANFAN_2_9": "sat_2_9",
+    "QIANFAN_2_10": "sat_2_10",
+    "QIANFAN_2_11": "sat_2_11",
+    "QIANFAN_2_12": "sat_2_12",
+    "QIANFAN_2_13": "sat_2_13",
+    "QIANFAN_2_14": "sat_2_14",
+    "QIANFAN_2_15": "sat_2_15",
+    "QIANFAN_2_16": "sat_2_16",
+    "QIANFAN_2_17": "sat_2_17",
+    "QIANFAN_2_18": "sat_2_18",
+    "QIANFAN_3_1": "sat_3_1",
+    "QIANFAN_3_2": "sat_3_2",
+    "QIANFAN_3_3": "sat_3_3",
+    "QIANFAN_3_4": "sat_3_4",
+    "QIANFAN_3_5": "sat_3_5",
+    "QIANFAN_3_6": "sat_3_6",
+    "QIANFAN_3_7": "sat_3_7",
+    "QIANFAN_3_8": "sat_3_8",
+    "QIANFAN_3_9": "sat_3_9",
+    "QIANFAN_3_10": "sat_3_10",
+    "QIANFAN_3_11": "sat_3_11",
+    "QIANFAN_3_12": "sat_3_12",
+    "QIANFAN_3_13": "sat_3_13",
+    "QIANFAN_3_14": "sat_3_14",
+    "QIANFAN_3_15": "sat_3_15",
+    "QIANFAN_3_16": "sat_3_16",
+    "QIANFAN_3_17": "sat_3_17",
+    "QIANFAN_4_1": "sat_4_1",
+    "QIANFAN_4_2": "sat_4_2",
+    "QIANFAN_4_3": "sat_4_3",
+    "QIANFAN_4_4": "sat_4_4",
+    "QIANFAN_4_5": "sat_4_5",
+    "QIANFAN_4_6": "sat_4_6",
+    "QIANFAN_4_7": "sat_4_7",
+    "QIANFAN_4_8": "sat_4_8",
+    "QIANFAN_4_9": "sat_4_9",
+    "QIANFAN_4_10": "sat_4_10",
+    "QIANFAN_4_11": "sat_4_11",
+    "QIANFAN_4_12": "sat_4_12",
+    "QIANFAN_4_13": "sat_4_13",
+    "QIANFAN_4_14": "sat_4_14",
+    "QIANFAN_4_15": "sat_4_15",
+    "QIANFAN_4_16": "sat_4_16",
+    "QIANFAN_4_17": "sat_4_17",
+    "QIANFAN_5_1": "sat_5_1",
+    "QIANFAN_5_2": "sat_5_2",
+    "QIANFAN_5_3": "sat_5_3",
+    "QIANFAN_5_4": "sat_5_4",
+    "QIANFAN_5_5": "sat_5_5",
+    "QIANFAN_5_6": "sat_5_6",
+    "QIANFAN_5_7": "sat_5_7",
+    "QIANFAN_5_8": "sat_5_8",
+    "QIANFAN_5_9": "sat_5_9",
+    "QIANFAN_5_10": "sat_5_10",
+    "QIANFAN_5_11": "sat_5_11",
+    "QIANFAN_5_12": "sat_5_12",
+    "QIANFAN_5_13": "sat_5_13",
+    "QIANFAN_5_14": "sat_5_14",
+    "QIANFAN_6_1": "sat_6_1",
+    "QIANFAN_6_2": "sat_6_2",
+    "QIANFAN_6_3": "sat_6_3",
+    "QIANFAN_6_4": "sat_6_4",
+    "QIANFAN_6_5": "sat_6_5",
+    "QIANFAN_6_6": "sat_6_6",
+    "QIANFAN_6_7": "sat_6_7",
+    "QIANFAN_6_8": "sat_6_8",
+    "QIANFAN_6_9": "sat_6_9",
+    "QIANFAN_6_10": "sat_6_10",
+    "QIANFAN_6_11": "sat_6_11",
+    "QIANFAN_6_12": "sat_6_12",
+    "QIANFAN_6_13": "sat_6_13",
+    "QIANFAN_6_14": "sat_6_14",
+    "QIANFAN_6_15": "sat_6_15",
+    "QIANFAN_6_16": "sat_6_16",
+    "QIANFAN_6_17": "sat_6_17",
+    "QIANFAN_6_18": "sat_6_18",
+    "QIANFAN_6_19": "sat_6_19",
+    "QIANFAN_6_20": "sat_6_20",
+    "QIANFAN_6_21": "sat_6_21",
+    "QIANFAN_6_22": "sat_6_22",
+    "QIANFAN_6_23": "sat_6_23",
+    "QIANFAN_6_24": "sat_6_24",
+    "QIANFAN_6_25": "sat_6_25",
+    "QIANFAN_6_26": "sat_6_26",
+    "QIANFAN_6_27": "sat_6_27",
+    "QIANFAN_6_28": "sat_6_28",
+    "QIANFAN_6_29": "sat_6_29",
+    "QIANFAN_6_30": "sat_6_30",
+    "QIANFAN_6_31": "sat_6_31",
+    "QIANFAN_7_1": "sat_7_1",
+    "QIANFAN_7_2": "sat_7_2",
+    "QIANFAN_7_3": "sat_7_3",
+    "QIANFAN_7_4": "sat_7_4",
+    "QIANFAN_7_5": "sat_7_5",
+    "QIANFAN_7_6": "sat_7_6",
+    "QIANFAN_7_7": "sat_7_7",
+    "QIANFAN_7_8": "sat_7_8",
+    "QIANFAN_7_9": "sat_7_9",
+    "QIANFAN_7_10": "sat_7_10",
+    "QIANFAN_7_11": "sat_7_11",
+    "QIANFAN_7_12": "sat_7_12",
+    "QIANFAN_7_13": "sat_7_13",
+    "QIANFAN_7_14": "sat_7_14",
+    "QIANFAN_7_15": "sat_7_15",
+    "QIANFAN_7_16": "sat_7_16",
+    "QIANFAN_7_17": "sat_7_17",
+    "QIANFAN_8_1": "sat_8_1",
+    "QIANFAN_8_2": "sat_8_2",
+    "QIANFAN_8_3": "sat_8_3",
+    "QIANFAN_8_4": "sat_8_4",
+    "QIANFAN_8_5": "sat_8_5",
+    "QIANFAN_8_6": "sat_8_6",
+    "QIANFAN_8_7": "sat_8_7",
+    "QIANFAN_8_8": "sat_8_8",
+    "QIANFAN_8_9": "sat_8_9",
+    "QIANFAN_8_10": "sat_8_10",
+    "QIANFAN_8_11": "sat_8_11",
+    "QIANFAN_8_12": "sat_8_12",
+    "QIANFAN_8_13": "sat_8_13",
+    "QIANFAN_8_14": "sat_8_14",
+    "QIANFAN_8_15": "sat_8_15",
+    "QIANFAN_8_16": "sat_8_16",
+    "QIANFAN_8_17": "sat_8_17",
+    "QIANFAN_8_18": "sat_8_18"
+  },
+  "aircraft_traj": [
+    {
+      "id": "AC_1",
+      "points": [
+        {
+          "time_s": 0,
+          "lat": 39.9,
+          "lon": 116.4,
+          "alt": 10.6
+        },
+        {
+          "time_s": 300,
+          "lat": 37.87,
+          "lon": 112.55,
+          "alt": 10.8
+        },
+        {
+          "time_s": 600,
+          "lat": 34.34,
+          "lon": 108.94,
+          "alt": 10.6
+        }
+      ]
+    },
+    {
+      "id": "AC_2",
+      "points": [
+        {
+          "time_s": 0,
+          "lat": 31.23,
+          "lon": 121.47,
+          "alt": 10.7
+        },
+        {
+          "time_s": 300,
+          "lat": 32.06,
+          "lon": 118.79,
+          "alt": 10.9
+        },
+        {
+          "time_s": 600,
+          "lat": 30.27,
+          "lon": 120.15,
+          "alt": 10.7
+        }
+      ]
+    },
+    {
+      "id": "AC_3",
+      "points": [
+        {
+          "time_s": 0,
+          "lat": 48.86,
+          "lon": 2.35,
+          "alt": 10.4
+        },
+        {
+          "time_s": 300,
+          "lat": 49.25,
+          "lon": 3.15,
+          "alt": 10.7
+        },
+        {
+          "time_s": 600,
+          "lat": 49.64,
+          "lon": 3.96,
+          "alt": 10.4
+        }
+      ]
+    },
+    {
+      "id": "AC_4",
+      "points": [
+        {
+          "time_s": 0,
+          "lat": 40.71,
+          "lon": -74.01,
+          "alt": 10.2
+        },
+        {
+          "time_s": 300,
+          "lat": 40.96,
+          "lon": -73.35,
+          "alt": 10.5
+        },
+        {
+          "time_s": 600,
+          "lat": 41.2,
+          "lon": -72.7,
+          "alt": 10.2
+        }
+      ]
+    },
+    {
+      "id": "AC_5",
+      "points": [
+        {
+          "time_s": 0,
+          "lat": 25.0,
+          "lon": -160.0,
+          "alt": 10.9
+        },
+        {
+          "time_s": 300,
+          "lat": 25.2,
+          "lon": -159.25,
+          "alt": 11.0
+        },
+        {
+          "time_s": 600,
+          "lat": 25.4,
+          "lon": -158.5,
+          "alt": 10.9
+        }
+      ]
+    }
+  ],
+  "ground_stations": [
+    {
+      "id": "GS_1",
+      "lat": 39.9042,
+      "lon": 116.4074,
+      "alt": 0.05
+    }
+  ],
+  "sat_antenna_angle": 35.0,
+  "bw_gsl": 150.0,
+  "geo_sat_antenna_angle": 8.0,
+  "bw_geo_gsl": 300.0,
+  "bw_isl": 500.0,
+  "geo_isl_max_distance_km": 75000.0,
+  "geo_isl_neighbor_count": 2,
+  "isl_mode": "dynamic-nearest",
+  "isl_max_distance_km": 3000.0,
+  "isl_global_neighbor_count": 4,
+  "isl_same_plane_neighbor_count": 2,
+  "isl_adjacent_plane_neighbor_count": 1,
+  "isl_require_los": true,
+  "isl_cross_plane_high_latitude_limit_deg": 70.0,
+  "isl_block_seam_cross_plane": true,
+  "routing_switching_cost_km": 0.0,
+  "rain_fade_intensity": 0.15,
+  "packet_size_bits": 12000,
+  "signal_speed_km_s": 299792.458,
+  "endpoint_processing_delay_ms": 2.0,
+  "satellite_processing_delay_ms": 3.0,
+  "gsl_access_delay_ms": 8.0,
+  "isl_processing_delay_ms": 1.5,
+  "aircraft_satellite_handover_duration_s": 10.0,
+  "aircraft_satellite_handover_extra_latency_ms": 15.0,
+  "aircraft_satellite_handover_extra_loss_rate": 0.01,
+  "ground_station_satellite_handover_duration_s": 6.0,
+  "ground_station_satellite_handover_extra_latency_ms": 8.0,
+  "ground_station_satellite_handover_extra_loss_rate": 0.004,
+  "traffic_demands": [
+    {
+      "source": "AC_1",
+      "target": "GS_1",
+      "rate_mbps": 25.0
+    },
+    {
+      "source": "AC_2",
+      "target": "GS_1",
+      "rate_mbps": 20.0
+    },
+    {
+      "source": "AC_3",
+      "target": "GS_1",
+      "rate_mbps": 30.0
+    },
+    {
+      "source": "AC_4",
+      "target": "GS_1",
+      "rate_mbps": 18.0
+    },
+    {
+      "source": "AC_5",
+      "target": "GS_1",
+      "rate_mbps": 22.0
+    }
+  ]
+}

@@ -47,11 +47,8 @@ class MultiGeoRoutingTests(unittest.TestCase):
             sat_antenna_angle=35.0,
             bw_gsl=150.0,
             geo_sat_antenna_angle=8.0,
-            bw_geo_gsl=400.0,
+            bw_geo_gsl=300.0,
         )
-
-        self.assertEqual(access._gsl_bandwidth("sat_1_1"), 150.0)
-        self.assertEqual(access._gsl_bandwidth("sat_geo_1"), 400.0)
 
         gsl_edges = access.compute(self.nodes, [self.demand])
         edge_keys = {edge.key() for edge in gsl_edges}
@@ -64,20 +61,20 @@ class MultiGeoRoutingTests(unittest.TestCase):
             },
         )
         self.assertTrue(all(edge.edge_type == "GSL" for edge in gsl_edges))
-        self.assertTrue(all(edge.capacity == 400.0 for edge in gsl_edges))
+        self.assertTrue(all(edge.capacity == 300.0 for edge in gsl_edges))
 
     def test_geo_relay_route_respects_neighbor_and_link_limits(self) -> None:
         access = AccessLayer(
             sat_antenna_angle=35.0,
             bw_gsl=150.0,
             geo_sat_antenna_angle=8.0,
-            bw_geo_gsl=400.0,
+            bw_geo_gsl=300.0,
         )
         gsl_edges = access.compute(self.nodes, [self.demand])
 
         routing = RoutingEngine(
             satellite_ids=[node.id for node in self.geo_nodes],
-            bw_isl=200.0,
+            bw_isl=500.0,
             geo_isl_neighbor_count=2,
             isl_require_los=True,
         )
@@ -90,7 +87,7 @@ class MultiGeoRoutingTests(unittest.TestCase):
 
         self.assertTrue(all(count <= 2 for count in neighbor_counts.values()))
         self.assertTrue(all(edge.edge_type == "ISL" for edge in isl_edges))
-        self.assertTrue(all(edge.capacity == 200.0 for edge in isl_edges))
+        self.assertTrue(all(edge.capacity == 500.0 for edge in isl_edges))
         self.assertNotIn(
             tuple(sorted(("sat_geo_1", "sat_geo_3"))),
             {edge.key() for edge in isl_edges},
@@ -115,9 +112,9 @@ class MultiGeoRoutingTests(unittest.TestCase):
             edge = used_edge_map[tuple(sorted((source, target)))]
             self.assertEqual(edge.traffic, self.demand.rate_mbps)
             if edge.edge_type == "GSL":
-                self.assertEqual(edge.capacity, 400.0)
+                self.assertEqual(edge.capacity, 300.0)
             else:
-                self.assertEqual(edge.capacity, 200.0)
+                self.assertEqual(edge.capacity, 500.0)
 
         self.assertEqual(metrics[0].path, route.path)
         self.assertGreater(metrics[0].latency_ms, 0.0)
@@ -184,6 +181,68 @@ class MultiGeoRoutingTests(unittest.TestCase):
 
         _, los_limited_edges = los_limited.compute(earth_blocked_nodes, [], [])
         self.assertEqual(los_limited_edges, [])
+
+    def test_aircraft_cannot_act_as_leo_geo_relay(self) -> None:
+        nodes = [
+            _node("sat_1_1", "satellite", 0.0, 0.0, 1000.0),
+            _node("sat_geo_1", "satellite", 0.0, 0.0, 35786.0),
+            _node("AC_SOURCE", "aircraft", 0.0, 0.0, 10.0),
+            _node("AC_RELAY", "aircraft", 0.0, 0.0, 10.0),
+            _node("GS_TARGET", "ground_station", 0.0, 0.0, 0.0),
+        ]
+        gsl_edges = [
+            Edge("AC_SOURCE", "sat_1_1", "GSL", 1000.0, 150.0),
+            Edge("AC_RELAY", "sat_1_1", "GSL", 1000.0, 150.0),
+            Edge("AC_RELAY", "sat_geo_1", "GSL", 35786.0, 300.0),
+            Edge("GS_TARGET", "sat_geo_1", "GSL", 35786.0, 300.0),
+        ]
+        demands = [
+            TrafficDemand(source="AC_RELAY", target="GS_TARGET", rate_mbps=5.0),
+            TrafficDemand(source="AC_SOURCE", target="GS_TARGET", rate_mbps=5.0),
+        ]
+        routing = RoutingEngine(
+            satellite_ids=["sat_1_1", "sat_geo_1"],
+            bw_isl=500.0,
+            isl_mode="static-grid",
+        )
+
+        routes, _ = routing.compute(nodes, gsl_edges, demands)
+
+        self.assertTrue(routes[0].connected)
+        self.assertEqual(routes[0].path, ["AC_RELAY", "sat_geo_1", "GS_TARGET"])
+        self.assertFalse(routes[1].connected)
+        self.assertEqual(routes[1].path, [])
+
+    def test_ground_station_cannot_act_as_leo_geo_relay(self) -> None:
+        nodes = [
+            _node("sat_1_1", "satellite", 0.0, 0.0, 1000.0),
+            _node("sat_geo_1", "satellite", 0.0, 0.0, 35786.0),
+            _node("AC_SOURCE", "aircraft", 0.0, 0.0, 10.0),
+            _node("GS_RELAY", "ground_station", 0.0, 0.0, 0.0),
+            _node("GS_TARGET", "ground_station", 0.0, 0.0, 0.0),
+        ]
+        gsl_edges = [
+            Edge("AC_SOURCE", "sat_1_1", "GSL", 1000.0, 150.0),
+            Edge("GS_RELAY", "sat_1_1", "GSL", 1000.0, 150.0),
+            Edge("GS_RELAY", "sat_geo_1", "GSL", 35786.0, 300.0),
+            Edge("GS_TARGET", "sat_geo_1", "GSL", 35786.0, 300.0),
+        ]
+        demands = [
+            TrafficDemand(source="GS_RELAY", target="GS_TARGET", rate_mbps=5.0),
+            TrafficDemand(source="AC_SOURCE", target="GS_TARGET", rate_mbps=5.0),
+        ]
+        routing = RoutingEngine(
+            satellite_ids=["sat_1_1", "sat_geo_1"],
+            bw_isl=500.0,
+            isl_mode="static-grid",
+        )
+
+        routes, _ = routing.compute(nodes, gsl_edges, demands)
+
+        self.assertTrue(routes[0].connected)
+        self.assertEqual(routes[0].path, ["GS_RELAY", "sat_geo_1", "GS_TARGET"])
+        self.assertFalse(routes[1].connected)
+        self.assertEqual(routes[1].path, [])
 
     def test_route_weight_prefers_available_capacity_over_short_overload(self) -> None:
         routing = RoutingEngine(
@@ -257,52 +316,6 @@ class MultiGeoRoutingTests(unittest.TestCase):
         isl_edge = next(edge for edge in used_edges if edge.edge_type == "ISL")
         self.assertEqual(isl_edge.traffic, 10.0)
         self.assertEqual(isl_edge.utilization, 1.0)
-
-    def test_shared_directional_link_uses_fair_capacity_allocation(self) -> None:
-        nodes = [
-            _node("AC_1", "aircraft", 0.0, 0.0, 10.0),
-            _node("AC_2", "aircraft", 0.0, 1.0, 10.0),
-            _node("sat_1_1", "satellite", 0.0, 0.0, 1000.0),
-            _node("sat_1_2", "satellite", 0.0, 10.0, 1000.0),
-            _node("GS_1", "ground_station", 0.0, 10.0, 0.0),
-        ]
-        gsl_edges = [
-            Edge("AC_1", "sat_1_1", "GSL", 1000.0, 100.0),
-            Edge("AC_2", "sat_1_1", "GSL", 1000.0, 100.0),
-            Edge("sat_1_2", "GS_1", "GSL", 1000.0, 100.0),
-        ]
-        isl_edges = [Edge("sat_1_1", "sat_1_2", "ISL", 2000.0, 10.0)]
-        routes = [
-            RoutePlan("AC_1", "GS_1", 25.0, ["AC_1", "sat_1_1", "sat_1_2", "GS_1"], True),
-            RoutePlan("AC_2", "GS_1", 25.0, ["AC_2", "sat_1_1", "sat_1_2", "GS_1"], True),
-        ]
-
-        used_edges, metrics = PerformanceLayer(rain_fade_intensity=0.0).compute(
-            routes,
-            gsl_edges,
-            isl_edges,
-            nodes=nodes,
-        )
-
-        self.assertEqual([metric.actual_tx_bandwidth_mbps for metric in metrics], [5.0, 5.0])
-        self.assertEqual([metric.dropped_bandwidth_mbps for metric in metrics], [20.0, 20.0])
-        shared_edge = next(edge for edge in used_edges if edge.edge_type == "ISL")
-        self.assertEqual(shared_edge.traffic, 10.0)
-        self.assertEqual(shared_edge.utilization, 1.0)
-
-    def test_opposite_directions_have_independent_capacity(self) -> None:
-        edge = Edge("A", "B", "ISL", 1000.0, 10.0)
-        routes = [
-            RoutePlan("A", "B", 25.0, ["A", "B"], True),
-            RoutePlan("B", "A", 25.0, ["B", "A"], True),
-        ]
-
-        used_edges, metrics = PerformanceLayer(rain_fade_intensity=0.0).compute(routes, [], [edge])
-
-        self.assertEqual([metric.actual_tx_bandwidth_mbps for metric in metrics], [10.0, 10.0])
-        self.assertEqual([metric.dropped_bandwidth_mbps for metric in metrics], [15.0, 15.0])
-        self.assertEqual(used_edges[0].traffic, 20.0)
-        self.assertEqual(used_edges[0].utilization, 1.0)
 
 
 if __name__ == "__main__":

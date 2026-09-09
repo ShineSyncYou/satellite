@@ -16,15 +16,27 @@
         <span>04 仿真参数</span>
       </div>
 
-      <label class="upload-card tle-file-picker">
-        <input name="tleFile" type="file" accept=".tle,.txt" @change="onFilePick" />
-        <span class="tle-file-picker__button">选择 TLE 文件</span>
-        <span class="tle-file-picker__content">
-          <span class="upload-card__label">TLE 文件</span>
-          <strong>{{ fileName || "尚未选择文件" }}</strong>
-          <small>支持 `.txt`、`.tle` 或原始 Two-Line Element 文本。</small>
-        </span>
-      </label>
+      <div class="tle-file-import">
+        <label class="upload-card tle-file-picker">
+          <input name="tleFile" type="file" accept=".tle,.txt" @change="onFilePick" />
+          <span class="tle-file-picker__button">选择 TLE 文件</span>
+          <span class="tle-file-picker__content">
+            <span class="upload-card__label">TLE 文件</span>
+            <strong>{{ fileName || "尚未选择文件" }}</strong>
+            <small>{{ normalizeIrregularTle ? "已启用不规则 TLE 适配：提交时将自动规范化名称和轨道面编号。" : "支持 `.txt`、`.tle` 或原始 Two-Line Element 文本。" }}</small>
+          </span>
+        </label>
+        <button
+          type="button"
+          class="tle-normalize-toggle"
+          :class="{ active: normalizeIrregularTle }"
+          :aria-pressed="normalizeIrregularTle"
+          @click="normalizeIrregularTle = !normalizeIrregularTle"
+        >
+          <span class="tle-normalize-toggle__indicator" aria-hidden="true"></span>
+          <span>不规则 TLE 适配</span>
+        </button>
+      </div>
 
       <label class="v2-field">
         <span>TLE 文本</span>
@@ -63,7 +75,7 @@
 import { computed, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import ProductScaffold from "../components/layout/ProductScaffold.vue";
-import { validateAutoWalkerTle } from "../lib/wizardScenarioBuilder";
+import { validateAutoWalkerTle, validateTleCatalog } from "../lib/wizardScenarioBuilder";
 import { getWizardDraft, updateWizardDraft } from "../lib/wizardDraft";
 
 const router = useRouter();
@@ -71,18 +83,24 @@ const draft = getWizardDraft();
 const tleText = ref(draft.tleText || "");
 const fileName = ref(draft.tleFileName || "");
 const title = ref(draft.title || "");
+const normalizeIrregularTle = ref(Boolean(draft.normalizeIrregularTle));
 const errorText = ref("");
 
-const validation = computed(() => validateAutoWalkerTle(tleText.value));
+const validation = computed(() => (
+  normalizeIrregularTle.value
+    ? validateTleCatalog(tleText.value)
+    : validateAutoWalkerTle(tleText.value)
+));
 
 watch(
-  [tleText, fileName, title, validation],
-  ([nextTleText, nextFileName, nextTitle, nextValidation]) => {
+  [tleText, fileName, title, normalizeIrregularTle, validation],
+  ([nextTleText, nextFileName, nextTitle, nextNormalizeIrregularTle, nextValidation]) => {
     updateWizardDraft({
       tleText: nextTleText,
       tleFileName: nextFileName,
       title: nextTitle,
-      satMappingStrategy: "auto-walker-name",
+      normalizeIrregularTle: nextNormalizeIrregularTle,
+      satMappingStrategy: nextNormalizeIrregularTle ? "normalize-irregular-tle" : "auto-walker-name",
       tleValidation: nextValidation,
     });
   },
@@ -117,7 +135,8 @@ function goNext() {
     title: title.value.trim(),
     tleText: tleText.value,
     tleFileName: fileName.value,
-    satMappingStrategy: "auto-walker-name",
+    normalizeIrregularTle: normalizeIrregularTle.value,
+    satMappingStrategy: normalizeIrregularTle.value ? "normalize-irregular-tle" : "auto-walker-name",
     tleValidation: validation.value,
   });
   router.push({ name: "wizard-trajectory" });
@@ -146,6 +165,10 @@ function goNext() {
   box-shadow: none;
   cursor: pointer;
   transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.tle-file-import {
+  position: relative;
 }
 
 .tle-file-picker:hover,
@@ -182,7 +205,55 @@ function goNext() {
 .tle-file-picker__content {
   display: grid;
   min-width: 0;
+  padding-right: 218px;
   gap: 6px;
+}
+
+.tle-normalize-toggle {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  z-index: 1;
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  border: 1px solid rgba(137, 206, 255, 0.3);
+  border-radius: 9px;
+  background: rgba(9, 28, 45, 0.92);
+  color: var(--v2-text-muted);
+  cursor: pointer;
+}
+
+.tle-normalize-toggle.active {
+  border-color: rgba(94, 234, 212, 0.72);
+  background: rgba(13, 91, 92, 0.72);
+  color: #ecfeff;
+}
+
+.tle-normalize-toggle__indicator {
+  position: relative;
+  width: 22px;
+  height: 12px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+}
+
+.tle-normalize-toggle__indicator::after {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+  transition: transform 160ms ease;
+}
+
+.tle-normalize-toggle.active .tle-normalize-toggle__indicator::after {
+  transform: translateX(10px);
 }
 
 .tle-file-picker__content strong {
@@ -198,6 +269,15 @@ function goNext() {
     align-items: flex-start;
     flex-direction: column;
     gap: 12px;
+  }
+
+  .tle-file-picker__content {
+    padding-right: 0;
+  }
+
+  .tle-normalize-toggle {
+    top: 12px;
+    right: 12px;
   }
 }
 </style>

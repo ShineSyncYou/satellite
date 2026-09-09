@@ -1,0 +1,2828 @@
+{
+  "input_file": "G:\\satsim\\gp.TLE",
+  "output_file": "G:\\satsim\\data\\gp_dynamic_ready.tle",
+  "reference_time": "2026-08-26T23:12:38.193408Z",
+  "settings": {
+    "name_prefix": "QIANFAN",
+    "max_abs_bstar": 0.1,
+    "mean_motion_tolerance_rev_per_day": 0.08,
+    "altitude_tolerance_km": 100.0,
+    "plane_cluster_gap_deg": 5.0,
+    "min_plane_size": 6,
+    "preserve_existing_plane_slot_names": true
+  },
+  "summary": {
+    "input_satellites": 238,
+    "retained_satellites": 164,
+    "excluded_satellites": 74,
+    "plane_count": 8,
+    "plane_sizes": {
+      "1": 32,
+      "2": 18,
+      "3": 17,
+      "4": 17,
+      "5": 14,
+      "6": 31,
+      "7": 17,
+      "8": 18
+    },
+    "plane_centers_raan_deg": [
+      272.655725,
+      293.303589,
+      313.7834,
+      334.249171,
+      354.461407,
+      15.157193,
+      35.965606,
+      76.382089
+    ],
+    "dominant_shell_mean_motion_rev_per_day": 13.510238959999999,
+    "dominant_shell_altitude_km": 1079.3280801476003
+  },
+  "renames": [
+    {
+      "original_name": "QIANFAN-192",
+      "satnum": 69410,
+      "raan_deg": 272.8293,
+      "mean_motion_rev_per_day": 13.51029533,
+      "altitude_km_at_reference": 1070.681,
+      "bstar": 6.4656e-05,
+      "new_name": "QIANFAN_1_1",
+      "plane": 1,
+      "slot": 1,
+      "phase_deg_at_reference": 10.308683
+    },
+    {
+      "original_name": "QIANFAN-14",
+      "satnum": 60392,
+      "raan_deg": 272.5581,
+      "mean_motion_rev_per_day": 13.51025718,
+      "altitude_km_at_reference": 1082.597,
+      "bstar": 6.3598e-05,
+      "new_name": "QIANFAN_1_2",
+      "plane": 1,
+      "slot": 2,
+      "phase_deg_at_reference": 20.00064
+    },
+    {
+      "original_name": "QIANFAN-188",
+      "satnum": 69406,
+      "raan_deg": 272.8181,
+      "mean_motion_rev_per_day": 13.51028221,
+      "altitude_km_at_reference": 1071.803,
+      "bstar": 8.9517e-05,
+      "new_name": "QIANFAN_1_3",
+      "plane": 1,
+      "slot": 3,
+      "phase_deg_at_reference": 29.972422
+    },
+    {
+      "original_name": "QIANFAN-16",
+      "satnum": 60394,
+      "raan_deg": 272.7035,
+      "mean_motion_rev_per_day": 13.51024663,
+      "altitude_km_at_reference": 1082.678,
+      "bstar": 7.1217e-05,
+      "new_name": "QIANFAN_1_4",
+      "plane": 1,
+      "slot": 4,
+      "phase_deg_at_reference": 40.229073
+    },
+    {
+      "original_name": "QIANFAN-190",
+      "satnum": 69408,
+      "raan_deg": 272.8224,
+      "mean_motion_rev_per_day": 13.51032471,
+      "altitude_km_at_reference": 1075.431,
+      "bstar": 7.5325e-05,
+      "new_name": "QIANFAN_1_5",
+      "plane": 1,
+      "slot": 5,
+      "phase_deg_at_reference": 49.964846
+    },
+    {
+      "original_name": "QIANFAN-17",
+      "satnum": 60395,
+      "raan_deg": 272.7781,
+      "mean_motion_rev_per_day": 13.51020809,
+      "altitude_km_at_reference": 1083.52,
+      "bstar": 7.8479e-05,
+      "new_name": "QIANFAN_1_6",
+      "plane": 1,
+      "slot": 6,
+      "phase_deg_at_reference": 59.858945
+    },
+    {
+      "original_name": "QIANFAN-3",
+      "satnum": 60381,
+      "raan_deg": 272.5107,
+      "mean_motion_rev_per_day": 13.51022097,
+      "altitude_km_at_reference": 1081.641,
+      "bstar": 9.8749e-05,
+      "new_name": "QIANFAN_1_7",
+      "plane": 1,
+      "slot": 7,
+      "phase_deg_at_reference": 79.857327
+    },
+    {
+      "original_name": "QIANFAN-184",
+      "satnum": 69402,
+      "raan_deg": 272.8445,
+      "mean_motion_rev_per_day": 13.51017068,
+      "altitude_km_at_reference": 1081.01,
+      "bstar": 5.6754000000000006e-05,
+      "new_name": "QIANFAN_1_8",
+      "plane": 1,
+      "slot": 8,
+      "phase_deg_at_reference": 89.877221
+    },
+    {
+      "original_name": "QIANFAN-11",
+      "satnum": 60389,
+      "raan_deg": 272.4302,
+      "mean_motion_rev_per_day": 13.51020445,
+      "altitude_km_at_reference": 1077.528,
+      "bstar": 7.8435e-05,
+      "new_name": "QIANFAN_1_9",
+      "plane": 1,
+      "slot": 9,
+      "phase_deg_at_reference": 99.936839
+    },
+    {
+      "original_name": "QIANFAN-2",
+      "satnum": 60380,
+      "raan_deg": 272.3985,
+      "mean_motion_rev_per_day": 13.51033736,
+      "altitude_km_at_reference": 1070.467,
+      "bstar": 8.8182e-05,
+      "new_name": "QIANFAN_1_10",
+      "plane": 1,
+      "slot": 10,
+      "phase_deg_at_reference": 120.213925
+    },
+    {
+      "original_name": "QIANFAN-183",
+      "satnum": 69401,
+      "raan_deg": 272.8229,
+      "mean_motion_rev_per_day": 13.51026856,
+      "altitude_km_at_reference": 1075.446,
+      "bstar": 9.2519e-05,
+      "new_name": "QIANFAN_1_11",
+      "plane": 1,
+      "slot": 11,
+      "phase_deg_at_reference": 129.987523
+    },
+    {
+      "original_name": "QIANFAN-13",
+      "satnum": 60391,
+      "raan_deg": 272.7586,
+      "mean_motion_rev_per_day": 13.51022709,
+      "altitude_km_at_reference": 1066.226,
+      "bstar": 8.5072e-05,
+      "new_name": "QIANFAN_1_12",
+      "plane": 1,
+      "slot": 12,
+      "phase_deg_at_reference": 140.317011
+    },
+    {
+      "original_name": "QIANFAN-197",
+      "satnum": 69415,
+      "raan_deg": 272.7779,
+      "mean_motion_rev_per_day": 13.51023031,
+      "altitude_km_at_reference": 1071.555,
+      "bstar": 5.7121000000000004e-05,
+      "new_name": "QIANFAN_1_13",
+      "plane": 1,
+      "slot": 13,
+      "phase_deg_at_reference": 150.078564
+    },
+    {
+      "original_name": "QIANFAN-18",
+      "satnum": 60396,
+      "raan_deg": 272.2893,
+      "mean_motion_rev_per_day": 13.5102026,
+      "altitude_km_at_reference": 1059.786,
+      "bstar": 7.1436e-05,
+      "new_name": "QIANFAN_1_14",
+      "plane": 1,
+      "slot": 14,
+      "phase_deg_at_reference": 160.210144
+    },
+    {
+      "original_name": "QIANFAN-8",
+      "satnum": 60386,
+      "raan_deg": 272.5863,
+      "mean_motion_rev_per_day": 13.51025358,
+      "altitude_km_at_reference": 1059.002,
+      "bstar": 6.2306e-05,
+      "new_name": "QIANFAN_1_15",
+      "plane": 1,
+      "slot": 15,
+      "phase_deg_at_reference": 180.005714
+    },
+    {
+      "original_name": "QIANFAN-196",
+      "satnum": 69414,
+      "raan_deg": 272.8012,
+      "mean_motion_rev_per_day": 13.50978758,
+      "altitude_km_at_reference": 1077.386,
+      "bstar": 5.243100000000001e-05,
+      "new_name": "QIANFAN_1_16",
+      "plane": 1,
+      "slot": 16,
+      "phase_deg_at_reference": 190.251231
+    },
+    {
+      "original_name": "QIANFAN-4",
+      "satnum": 60382,
+      "raan_deg": 272.468,
+      "mean_motion_rev_per_day": 13.51020539,
+      "altitude_km_at_reference": 1068.946,
+      "bstar": 1.8584e-05,
+      "new_name": "QIANFAN_1_17",
+      "plane": 1,
+      "slot": 17,
+      "phase_deg_at_reference": 201.030618
+    },
+    {
+      "original_name": "QIANFAN-198",
+      "satnum": 69416,
+      "raan_deg": 272.7932,
+      "mean_motion_rev_per_day": 13.51018989,
+      "altitude_km_at_reference": 1080.319,
+      "bstar": 3.9768e-05,
+      "new_name": "QIANFAN_1_18",
+      "plane": 1,
+      "slot": 18,
+      "phase_deg_at_reference": 209.929306
+    },
+    {
+      "original_name": "QIANFAN-6",
+      "satnum": 60384,
+      "raan_deg": 272.3465,
+      "mean_motion_rev_per_day": 13.51023431,
+      "altitude_km_at_reference": 1078.632,
+      "bstar": 6.6888e-05,
+      "new_name": "QIANFAN_1_19",
+      "plane": 1,
+      "slot": 19,
+      "phase_deg_at_reference": 220.833069
+    },
+    {
+      "original_name": "QIANFAN-195",
+      "satnum": 69413,
+      "raan_deg": 272.7986,
+      "mean_motion_rev_per_day": 13.50116089,
+      "altitude_km_at_reference": 1093.367,
+      "bstar": 9.951600000000001e-05,
+      "new_name": "QIANFAN_1_20",
+      "plane": 1,
+      "slot": 20,
+      "phase_deg_at_reference": 244.141589
+    },
+    {
+      "original_name": "QIANFAN-193",
+      "satnum": 69411,
+      "raan_deg": 272.8082,
+      "mean_motion_rev_per_day": 13.51026423,
+      "altitude_km_at_reference": 1095.883,
+      "bstar": 4.8356e-05,
+      "new_name": "QIANFAN_1_21",
+      "plane": 1,
+      "slot": 21,
+      "phase_deg_at_reference": 249.8502
+    },
+    {
+      "original_name": "QIANFAN-1",
+      "satnum": 60379,
+      "raan_deg": 272.5893,
+      "mean_motion_rev_per_day": 13.51024977,
+      "altitude_km_at_reference": 1093.665,
+      "bstar": 8.2786e-05,
+      "new_name": "QIANFAN_1_22",
+      "plane": 1,
+      "slot": 22,
+      "phase_deg_at_reference": 260.923603
+    },
+    {
+      "original_name": "QIANFAN-194",
+      "satnum": 69412,
+      "raan_deg": 272.8154,
+      "mean_motion_rev_per_day": 13.51025336,
+      "altitude_km_at_reference": 1098.663,
+      "bstar": 9.6662e-05,
+      "new_name": "QIANFAN_1_23",
+      "plane": 1,
+      "slot": 23,
+      "phase_deg_at_reference": 269.977752
+    },
+    {
+      "original_name": "QIANFAN-10",
+      "satnum": 60388,
+      "raan_deg": 272.0329,
+      "mean_motion_rev_per_day": 13.51020911,
+      "altitude_km_at_reference": 1105.032,
+      "bstar": 8.7384e-05,
+      "new_name": "QIANFAN_1_24",
+      "plane": 1,
+      "slot": 24,
+      "phase_deg_at_reference": 280.753702
+    },
+    {
+      "original_name": "QIANFAN-191",
+      "satnum": 69409,
+      "raan_deg": 272.8287,
+      "mean_motion_rev_per_day": 13.51031947,
+      "altitude_km_at_reference": 1096.062,
+      "bstar": 6.37e-05,
+      "new_name": "QIANFAN_1_25",
+      "plane": 1,
+      "slot": 25,
+      "phase_deg_at_reference": 289.702493
+    },
+    {
+      "original_name": "QIANFAN-9",
+      "satnum": 60387,
+      "raan_deg": 272.659,
+      "mean_motion_rev_per_day": 13.51020705,
+      "altitude_km_at_reference": 1100.092,
+      "bstar": 0.00010407,
+      "new_name": "QIANFAN_1_26",
+      "plane": 1,
+      "slot": 26,
+      "phase_deg_at_reference": 300.694677
+    },
+    {
+      "original_name": "QIANFAN-200",
+      "satnum": 69418,
+      "raan_deg": 272.8285,
+      "mean_motion_rev_per_day": 13.5102547,
+      "altitude_km_at_reference": 1089.07,
+      "bstar": 0.00010093000000000001,
+      "new_name": "QIANFAN_1_27",
+      "plane": 1,
+      "slot": 27,
+      "phase_deg_at_reference": 309.919852
+    },
+    {
+      "original_name": "QIANFAN-5",
+      "satnum": 60383,
+      "raan_deg": 272.5326,
+      "mean_motion_rev_per_day": 13.51030221,
+      "altitude_km_at_reference": 1092.397,
+      "bstar": 0.00010846,
+      "new_name": "QIANFAN_1_28",
+      "plane": 1,
+      "slot": 28,
+      "phase_deg_at_reference": 320.466239
+    },
+    {
+      "original_name": "QIANFAN-185",
+      "satnum": 69403,
+      "raan_deg": 272.7782,
+      "mean_motion_rev_per_day": 13.5101855,
+      "altitude_km_at_reference": 1075.599,
+      "bstar": 6.2023e-05,
+      "new_name": "QIANFAN_1_29",
+      "plane": 1,
+      "slot": 29,
+      "phase_deg_at_reference": 330.212792
+    },
+    {
+      "original_name": "QIANFAN-15",
+      "satnum": 60393,
+      "raan_deg": 272.575,
+      "mean_motion_rev_per_day": 13.51026608,
+      "altitude_km_at_reference": 1085.9,
+      "bstar": 0.00011672000000000001,
+      "new_name": "QIANFAN_1_30",
+      "plane": 1,
+      "slot": 30,
+      "phase_deg_at_reference": 339.965386
+    },
+    {
+      "original_name": "QIANFAN-189",
+      "satnum": 69407,
+      "raan_deg": 272.8237,
+      "mean_motion_rev_per_day": 13.51027793,
+      "altitude_km_at_reference": 1073.603,
+      "bstar": 7.8322e-05,
+      "new_name": "QIANFAN_1_31",
+      "plane": 1,
+      "slot": 31,
+      "phase_deg_at_reference": 350.32569
+    },
+    {
+      "original_name": "QIANFAN-12",
+      "satnum": 60390,
+      "raan_deg": 272.5758,
+      "mean_motion_rev_per_day": 13.5102283,
+      "altitude_km_at_reference": 1081.366,
+      "bstar": 8.215200000000001e-05,
+      "new_name": "QIANFAN_1_32",
+      "plane": 1,
+      "slot": 32,
+      "phase_deg_at_reference": 359.9899
+    },
+    {
+      "original_name": "QIANFAN-82",
+      "satnum": 63168,
+      "raan_deg": 293.2317,
+      "mean_motion_rev_per_day": 13.51017962,
+      "altitude_km_at_reference": 1072.769,
+      "bstar": 0.00017972,
+      "new_name": "QIANFAN_2_1",
+      "plane": 2,
+      "slot": 1,
+      "phase_deg_at_reference": 4.870816
+    },
+    {
+      "original_name": "QIANFAN-163",
+      "satnum": 69325,
+      "raan_deg": 293.5108,
+      "mean_motion_rev_per_day": 13.51020624,
+      "altitude_km_at_reference": 1071.695,
+      "bstar": 0.00012978000000000002,
+      "new_name": "QIANFAN_2_2",
+      "plane": 2,
+      "slot": 2,
+      "phase_deg_at_reference": 25.204961
+    },
+    {
+      "original_name": "QIANFAN-74",
+      "satnum": 63160,
+      "raan_deg": 293.2258,
+      "mean_motion_rev_per_day": 13.51017831,
+      "altitude_km_at_reference": 1074.397,
+      "bstar": 0.00010614,
+      "new_name": "QIANFAN_2_3",
+      "plane": 2,
+      "slot": 3,
+      "phase_deg_at_reference": 45.150868
+    },
+    {
+      "original_name": "QIANFAN-80",
+      "satnum": 63166,
+      "raan_deg": 293.1214,
+      "mean_motion_rev_per_day": 13.51026907,
+      "altitude_km_at_reference": 1071.093,
+      "bstar": 0.00017684,
+      "new_name": "QIANFAN_2_4",
+      "plane": 2,
+      "slot": 4,
+      "phase_deg_at_reference": 64.429422
+    },
+    {
+      "original_name": "QIANFAN-89",
+      "satnum": 63175,
+      "raan_deg": 293.3559,
+      "mean_motion_rev_per_day": 13.51022149,
+      "altitude_km_at_reference": 1068.824,
+      "bstar": 0.00016416,
+      "new_name": "QIANFAN_2_5",
+      "plane": 2,
+      "slot": 5,
+      "phase_deg_at_reference": 85.18239
+    },
+    {
+      "original_name": "QIANFAN-75",
+      "satnum": 63161,
+      "raan_deg": 293.4566,
+      "mean_motion_rev_per_day": 13.5102736,
+      "altitude_km_at_reference": 1067.782,
+      "bstar": 0.00017491000000000002,
+      "new_name": "QIANFAN_2_6",
+      "plane": 2,
+      "slot": 6,
+      "phase_deg_at_reference": 104.325829
+    },
+    {
+      "original_name": "QIANFAN-76",
+      "satnum": 63162,
+      "raan_deg": 293.4368,
+      "mean_motion_rev_per_day": 13.51022414,
+      "altitude_km_at_reference": 1066.736,
+      "bstar": 9.0408e-05,
+      "new_name": "QIANFAN_2_7",
+      "plane": 2,
+      "slot": 7,
+      "phase_deg_at_reference": 124.687297
+    },
+    {
+      "original_name": "QIANFAN-79",
+      "satnum": 63165,
+      "raan_deg": 293.4155,
+      "mean_motion_rev_per_day": 13.51019687,
+      "altitude_km_at_reference": 1063.65,
+      "bstar": 0.00015164,
+      "new_name": "QIANFAN_2_8",
+      "plane": 2,
+      "slot": 8,
+      "phase_deg_at_reference": 145.514714
+    },
+    {
+      "original_name": "QIANFAN-81",
+      "satnum": 63167,
+      "raan_deg": 293.1832,
+      "mean_motion_rev_per_day": 13.51022798,
+      "altitude_km_at_reference": 1065.682,
+      "bstar": 0.00018867000000000002,
+      "new_name": "QIANFAN_2_9",
+      "plane": 2,
+      "slot": 9,
+      "phase_deg_at_reference": 165.64087
+    },
+    {
+      "original_name": "QIANFAN-164",
+      "satnum": 69326,
+      "raan_deg": 293.5054,
+      "mean_motion_rev_per_day": 13.51033683,
+      "altitude_km_at_reference": 1072.181,
+      "bstar": 0.00022713,
+      "new_name": "QIANFAN_2_10",
+      "plane": 2,
+      "slot": 10,
+      "phase_deg_at_reference": 185.516183
+    },
+    {
+      "original_name": "QIANFAN-86",
+      "satnum": 63172,
+      "raan_deg": 293.0989,
+      "mean_motion_rev_per_day": 13.51022557,
+      "altitude_km_at_reference": 1079.534,
+      "bstar": 0.00018922,
+      "new_name": "QIANFAN_2_11",
+      "plane": 2,
+      "slot": 11,
+      "phase_deg_at_reference": 205.362626
+    },
+    {
+      "original_name": "QIANFAN-84",
+      "satnum": 63170,
+      "raan_deg": 293.3614,
+      "mean_motion_rev_per_day": 13.51022722,
+      "altitude_km_at_reference": 1093.654,
+      "bstar": 0.0001289,
+      "new_name": "QIANFAN_2_12",
+      "plane": 2,
+      "slot": 12,
+      "phase_deg_at_reference": 225.538036
+    },
+    {
+      "original_name": "QIANFAN-85",
+      "satnum": 63171,
+      "raan_deg": 293.2316,
+      "mean_motion_rev_per_day": 13.51026653,
+      "altitude_km_at_reference": 1102.613,
+      "bstar": 0.0001793,
+      "new_name": "QIANFAN_2_13",
+      "plane": 2,
+      "slot": 13,
+      "phase_deg_at_reference": 245.43452
+    },
+    {
+      "original_name": "QIANFAN-88",
+      "satnum": 63174,
+      "raan_deg": 293.1632,
+      "mean_motion_rev_per_day": 13.51026897,
+      "altitude_km_at_reference": 1106.835,
+      "bstar": 0.00017045,
+      "new_name": "QIANFAN_2_14",
+      "plane": 2,
+      "slot": 14,
+      "phase_deg_at_reference": 264.969506
+    },
+    {
+      "original_name": "QIANFAN-78",
+      "satnum": 63164,
+      "raan_deg": 293.302,
+      "mean_motion_rev_per_day": 13.51011292,
+      "altitude_km_at_reference": 1109.134,
+      "bstar": 6.921600000000001e-06,
+      "new_name": "QIANFAN_2_15",
+      "plane": 2,
+      "slot": 15,
+      "phase_deg_at_reference": 283.173662
+    },
+    {
+      "original_name": "QIANFAN-90",
+      "satnum": 63176,
+      "raan_deg": 293.326,
+      "mean_motion_rev_per_day": 13.51018348,
+      "altitude_km_at_reference": 1100.628,
+      "bstar": 0.00014107,
+      "new_name": "QIANFAN_2_16",
+      "plane": 2,
+      "slot": 16,
+      "phase_deg_at_reference": 305.084467
+    },
+    {
+      "original_name": "QIANFAN-73",
+      "satnum": 63159,
+      "raan_deg": 293.3344,
+      "mean_motion_rev_per_day": 13.51023678,
+      "altitude_km_at_reference": 1090.974,
+      "bstar": 0.00014617,
+      "new_name": "QIANFAN_2_17",
+      "plane": 2,
+      "slot": 17,
+      "phase_deg_at_reference": 324.759629
+    },
+    {
+      "original_name": "QIANFAN-87",
+      "satnum": 63173,
+      "raan_deg": 293.204,
+      "mean_motion_rev_per_day": 13.51030648,
+      "altitude_km_at_reference": 1079.671,
+      "bstar": 0.00015416,
+      "new_name": "QIANFAN_2_18",
+      "plane": 2,
+      "slot": 18,
+      "phase_deg_at_reference": 344.279388
+    },
+    {
+      "original_name": "QIANFAN-117",
+      "satnum": 68644,
+      "raan_deg": 313.7854,
+      "mean_motion_rev_per_day": 13.51020449,
+      "altitude_km_at_reference": 1070.633,
+      "bstar": 0.00012663,
+      "new_name": "QIANFAN_3_1",
+      "plane": 3,
+      "slot": 1,
+      "phase_deg_at_reference": 19.0313
+    },
+    {
+      "original_name": "QIANFAN-114",
+      "satnum": 68641,
+      "raan_deg": 313.8045,
+      "mean_motion_rev_per_day": 13.51025356,
+      "altitude_km_at_reference": 1073.366,
+      "bstar": 0.00013437,
+      "new_name": "QIANFAN_3_2",
+      "plane": 3,
+      "slot": 2,
+      "phase_deg_at_reference": 39.365909
+    },
+    {
+      "original_name": "QIANFAN-110",
+      "satnum": 68637,
+      "raan_deg": 313.8242,
+      "mean_motion_rev_per_day": 13.51029293,
+      "altitude_km_at_reference": 1077.399,
+      "bstar": 0.00014086,
+      "new_name": "QIANFAN_3_3",
+      "plane": 3,
+      "slot": 3,
+      "phase_deg_at_reference": 59.203693
+    },
+    {
+      "original_name": "QIANFAN-113",
+      "satnum": 68640,
+      "raan_deg": 313.7895,
+      "mean_motion_rev_per_day": 13.51027093,
+      "altitude_km_at_reference": 1080.247,
+      "bstar": 0.00015531,
+      "new_name": "QIANFAN_3_4",
+      "plane": 3,
+      "slot": 4,
+      "phase_deg_at_reference": 79.498708
+    },
+    {
+      "original_name": "QIANFAN-111",
+      "satnum": 68638,
+      "raan_deg": 313.777,
+      "mean_motion_rev_per_day": 13.51018595,
+      "altitude_km_at_reference": 1077.379,
+      "bstar": 0.00014714,
+      "new_name": "QIANFAN_3_5",
+      "plane": 3,
+      "slot": 5,
+      "phase_deg_at_reference": 118.896684
+    },
+    {
+      "original_name": "QIANFAN-126",
+      "satnum": 68653,
+      "raan_deg": 313.7433,
+      "mean_motion_rev_per_day": 13.51026602,
+      "altitude_km_at_reference": 1072.932,
+      "bstar": 0.00014867,
+      "new_name": "QIANFAN_3_6",
+      "plane": 3,
+      "slot": 6,
+      "phase_deg_at_reference": 139.580691
+    },
+    {
+      "original_name": "QIANFAN-121",
+      "satnum": 68648,
+      "raan_deg": 313.7773,
+      "mean_motion_rev_per_day": 13.51021343,
+      "altitude_km_at_reference": 1070.179,
+      "bstar": 0.00015528000000000002,
+      "new_name": "QIANFAN_3_7",
+      "plane": 3,
+      "slot": 7,
+      "phase_deg_at_reference": 159.189403
+    },
+    {
+      "original_name": "QIANFAN-125",
+      "satnum": 68652,
+      "raan_deg": 313.7756,
+      "mean_motion_rev_per_day": 13.51021379,
+      "altitude_km_at_reference": 1070.937,
+      "bstar": 0.00013379,
+      "new_name": "QIANFAN_3_8",
+      "plane": 3,
+      "slot": 8,
+      "phase_deg_at_reference": 179.194861
+    },
+    {
+      "original_name": "QIANFAN-122",
+      "satnum": 68649,
+      "raan_deg": 313.7754,
+      "mean_motion_rev_per_day": 13.51024757,
+      "altitude_km_at_reference": 1076.334,
+      "bstar": 0.00013383999999999998,
+      "new_name": "QIANFAN_3_9",
+      "plane": 3,
+      "slot": 9,
+      "phase_deg_at_reference": 199.166456
+    },
+    {
+      "original_name": "QIANFAN-118",
+      "satnum": 68645,
+      "raan_deg": 313.7933,
+      "mean_motion_rev_per_day": 13.51022317,
+      "altitude_km_at_reference": 1084.425,
+      "bstar": 0.00013856,
+      "new_name": "QIANFAN_3_10",
+      "plane": 3,
+      "slot": 10,
+      "phase_deg_at_reference": 219.510399
+    },
+    {
+      "original_name": "QIANFAN-124",
+      "satnum": 68651,
+      "raan_deg": 313.7749,
+      "mean_motion_rev_per_day": 13.51024421,
+      "altitude_km_at_reference": 1093.011,
+      "bstar": 0.00014407,
+      "new_name": "QIANFAN_3_11",
+      "plane": 3,
+      "slot": 11,
+      "phase_deg_at_reference": 239.023621
+    },
+    {
+      "original_name": "QIANFAN-115",
+      "satnum": 68642,
+      "raan_deg": 313.8087,
+      "mean_motion_rev_per_day": 13.51021955,
+      "altitude_km_at_reference": 1098.279,
+      "bstar": 0.00015468,
+      "new_name": "QIANFAN_3_12",
+      "plane": 3,
+      "slot": 12,
+      "phase_deg_at_reference": 259.389011
+    },
+    {
+      "original_name": "QIANFAN-120",
+      "satnum": 68647,
+      "raan_deg": 313.7764,
+      "mean_motion_rev_per_day": 13.51029457,
+      "altitude_km_at_reference": 1098.544,
+      "bstar": 0.00015355,
+      "new_name": "QIANFAN_3_13",
+      "plane": 3,
+      "slot": 13,
+      "phase_deg_at_reference": 279.655969
+    },
+    {
+      "original_name": "QIANFAN-112",
+      "satnum": 68639,
+      "raan_deg": 313.7889,
+      "mean_motion_rev_per_day": 13.51021121,
+      "altitude_km_at_reference": 1093.991,
+      "bstar": 0.00015534000000000001,
+      "new_name": "QIANFAN_3_14",
+      "plane": 3,
+      "slot": 14,
+      "phase_deg_at_reference": 299.032861
+    },
+    {
+      "original_name": "QIANFAN-116",
+      "satnum": 68643,
+      "raan_deg": 313.7652,
+      "mean_motion_rev_per_day": 13.51022695,
+      "altitude_km_at_reference": 1085.676,
+      "bstar": 0.00016139,
+      "new_name": "QIANFAN_3_15",
+      "plane": 3,
+      "slot": 15,
+      "phase_deg_at_reference": 319.321284
+    },
+    {
+      "original_name": "QIANFAN-119",
+      "satnum": 68646,
+      "raan_deg": 313.7916,
+      "mean_motion_rev_per_day": 13.51020256,
+      "altitude_km_at_reference": 1077.11,
+      "bstar": 0.00013089999999999998,
+      "new_name": "QIANFAN_3_16",
+      "plane": 3,
+      "slot": 16,
+      "phase_deg_at_reference": 339.540046
+    },
+    {
+      "original_name": "QIANFAN-123",
+      "satnum": 68650,
+      "raan_deg": 313.7666,
+      "mean_motion_rev_per_day": 13.51030043,
+      "altitude_km_at_reference": 1071.661,
+      "bstar": 0.00013848,
+      "new_name": "QIANFAN_3_17",
+      "plane": 3,
+      "slot": 17,
+      "phase_deg_at_reference": 359.228248
+    },
+    {
+      "original_name": "QIANFAN-131",
+      "satnum": 69077,
+      "raan_deg": 334.2483,
+      "mean_motion_rev_per_day": 13.51021688,
+      "altitude_km_at_reference": 1072.453,
+      "bstar": 0.00015696,
+      "new_name": "QIANFAN_4_1",
+      "plane": 4,
+      "slot": 1,
+      "phase_deg_at_reference": 33.307586
+    },
+    {
+      "original_name": "QIANFAN-133",
+      "satnum": 69079,
+      "raan_deg": 334.2542,
+      "mean_motion_rev_per_day": 13.51021541,
+      "altitude_km_at_reference": 1076.524,
+      "bstar": 0.00015006,
+      "new_name": "QIANFAN_4_2",
+      "plane": 4,
+      "slot": 2,
+      "phase_deg_at_reference": 53.253323
+    },
+    {
+      "original_name": "QIANFAN-128",
+      "satnum": 69074,
+      "raan_deg": 334.288,
+      "mean_motion_rev_per_day": 13.5103047,
+      "altitude_km_at_reference": 1080.151,
+      "bstar": 0.00015418000000000002,
+      "new_name": "QIANFAN_4_3",
+      "plane": 4,
+      "slot": 3,
+      "phase_deg_at_reference": 73.724926
+    },
+    {
+      "original_name": "QIANFAN-132",
+      "satnum": 69078,
+      "raan_deg": 334.3057,
+      "mean_motion_rev_per_day": 13.51028491,
+      "altitude_km_at_reference": 1080.615,
+      "bstar": 0.00014473,
+      "new_name": "QIANFAN_4_4",
+      "plane": 4,
+      "slot": 4,
+      "phase_deg_at_reference": 94.215836
+    },
+    {
+      "original_name": "QIANFAN-127",
+      "satnum": 69073,
+      "raan_deg": 334.2521,
+      "mean_motion_rev_per_day": 13.51023357,
+      "altitude_km_at_reference": 1078.337,
+      "bstar": 0.00014615,
+      "new_name": "QIANFAN_4_5",
+      "plane": 4,
+      "slot": 5,
+      "phase_deg_at_reference": 113.861788
+    },
+    {
+      "original_name": "QIANFAN-130",
+      "satnum": 69076,
+      "raan_deg": 334.2807,
+      "mean_motion_rev_per_day": 13.51029961,
+      "altitude_km_at_reference": 1073.912,
+      "bstar": 0.00015691,
+      "new_name": "QIANFAN_4_6",
+      "plane": 4,
+      "slot": 6,
+      "phase_deg_at_reference": 133.881205
+    },
+    {
+      "original_name": "QIANFAN-144",
+      "satnum": 69090,
+      "raan_deg": 334.2422,
+      "mean_motion_rev_per_day": 13.51027507,
+      "altitude_km_at_reference": 1070.413,
+      "bstar": 0.00015149000000000003,
+      "new_name": "QIANFAN_4_7",
+      "plane": 4,
+      "slot": 7,
+      "phase_deg_at_reference": 154.066937
+    },
+    {
+      "original_name": "QIANFAN-142",
+      "satnum": 69088,
+      "raan_deg": 334.22,
+      "mean_motion_rev_per_day": 13.51027057,
+      "altitude_km_at_reference": 1070.085,
+      "bstar": 0.00017045,
+      "new_name": "QIANFAN_4_8",
+      "plane": 4,
+      "slot": 8,
+      "phase_deg_at_reference": 174.056355
+    },
+    {
+      "original_name": "QIANFAN-143",
+      "satnum": 69089,
+      "raan_deg": 334.2244,
+      "mean_motion_rev_per_day": 13.51023337,
+      "altitude_km_at_reference": 1074.355,
+      "bstar": 0.00015939,
+      "new_name": "QIANFAN_4_9",
+      "plane": 4,
+      "slot": 9,
+      "phase_deg_at_reference": 193.706369
+    },
+    {
+      "original_name": "QIANFAN-141",
+      "satnum": 69087,
+      "raan_deg": 334.2212,
+      "mean_motion_rev_per_day": 13.51024605,
+      "altitude_km_at_reference": 1081.683,
+      "bstar": 0.00016241,
+      "new_name": "QIANFAN_4_10",
+      "plane": 4,
+      "slot": 10,
+      "phase_deg_at_reference": 213.874939
+    },
+    {
+      "original_name": "QIANFAN-138",
+      "satnum": 69084,
+      "raan_deg": 334.272,
+      "mean_motion_rev_per_day": 13.51035435,
+      "altitude_km_at_reference": 1090.341,
+      "bstar": 0.0001568,
+      "new_name": "QIANFAN_4_11",
+      "plane": 4,
+      "slot": 11,
+      "phase_deg_at_reference": 233.9217
+    },
+    {
+      "original_name": "QIANFAN-140",
+      "satnum": 69086,
+      "raan_deg": 334.257,
+      "mean_motion_rev_per_day": 13.51031202,
+      "altitude_km_at_reference": 1096.839,
+      "bstar": 0.00016336,
+      "new_name": "QIANFAN_4_12",
+      "plane": 4,
+      "slot": 12,
+      "phase_deg_at_reference": 254.442225
+    },
+    {
+      "original_name": "QIANFAN-134",
+      "satnum": 69080,
+      "raan_deg": 334.2766,
+      "mean_motion_rev_per_day": 13.51024882,
+      "altitude_km_at_reference": 1098.558,
+      "bstar": 0.00014906,
+      "new_name": "QIANFAN_4_13",
+      "plane": 4,
+      "slot": 13,
+      "phase_deg_at_reference": 273.499479
+    },
+    {
+      "original_name": "QIANFAN-139",
+      "satnum": 69085,
+      "raan_deg": 334.2543,
+      "mean_motion_rev_per_day": 13.51025871,
+      "altitude_km_at_reference": 1095.684,
+      "bstar": 5.1852e-05,
+      "new_name": "QIANFAN_4_14",
+      "plane": 4,
+      "slot": 14,
+      "phase_deg_at_reference": 292.904147
+    },
+    {
+      "original_name": "QIANFAN-129",
+      "satnum": 69075,
+      "raan_deg": 334.2191,
+      "mean_motion_rev_per_day": 13.51019058,
+      "altitude_km_at_reference": 1087.585,
+      "bstar": 4.2974000000000006e-05,
+      "new_name": "QIANFAN_4_15",
+      "plane": 4,
+      "slot": 15,
+      "phase_deg_at_reference": 314.304576
+    },
+    {
+      "original_name": "QIANFAN-136",
+      "satnum": 69082,
+      "raan_deg": 334.2726,
+      "mean_motion_rev_per_day": 13.51027934,
+      "altitude_km_at_reference": 1079.3,
+      "bstar": 0.00015383,
+      "new_name": "QIANFAN_4_16",
+      "plane": 4,
+      "slot": 16,
+      "phase_deg_at_reference": 333.353292
+    },
+    {
+      "original_name": "QIANFAN-137",
+      "satnum": 69083,
+      "raan_deg": 334.1475,
+      "mean_motion_rev_per_day": 13.51027806,
+      "altitude_km_at_reference": 1073.168,
+      "bstar": 0.00014453,
+      "new_name": "QIANFAN_4_17",
+      "plane": 4,
+      "slot": 17,
+      "phase_deg_at_reference": 353.393839
+    },
+    {
+      "original_name": "QIANFAN-172",
+      "satnum": 69389,
+      "raan_deg": 354.4639,
+      "mean_motion_rev_per_day": 13.51024675,
+      "altitude_km_at_reference": 1070.694,
+      "bstar": 0.00010495,
+      "new_name": "QIANFAN_5_1",
+      "plane": 5,
+      "slot": 1,
+      "phase_deg_at_reference": 17.777544
+    },
+    {
+      "original_name": "QIANFAN-167",
+      "satnum": 69384,
+      "raan_deg": 354.5062,
+      "mean_motion_rev_per_day": 13.51026616,
+      "altitude_km_at_reference": 1080.631,
+      "bstar": 0.00013136000000000002,
+      "new_name": "QIANFAN_5_2",
+      "plane": 5,
+      "slot": 2,
+      "phase_deg_at_reference": 97.892734
+    },
+    {
+      "original_name": "QIANFAN-166",
+      "satnum": 69383,
+      "raan_deg": 354.502,
+      "mean_motion_rev_per_day": 13.51017406,
+      "altitude_km_at_reference": 1077.829,
+      "bstar": 0.00013595,
+      "new_name": "QIANFAN_5_3",
+      "plane": 5,
+      "slot": 3,
+      "phase_deg_at_reference": 118.13485
+    },
+    {
+      "original_name": "QIANFAN-165",
+      "satnum": 69382,
+      "raan_deg": 354.4886,
+      "mean_motion_rev_per_day": 13.51017009,
+      "altitude_km_at_reference": 1073.752,
+      "bstar": 0.00010961,
+      "new_name": "QIANFAN_5_4",
+      "plane": 5,
+      "slot": 4,
+      "phase_deg_at_reference": 138.370255
+    },
+    {
+      "original_name": "QIANFAN-180",
+      "satnum": 69397,
+      "raan_deg": 354.427,
+      "mean_motion_rev_per_day": 13.51008033,
+      "altitude_km_at_reference": 1079.328,
+      "bstar": 0.00011913,
+      "new_name": "QIANFAN_5_5",
+      "plane": 5,
+      "slot": 5,
+      "phase_deg_at_reference": 158.785321
+    },
+    {
+      "original_name": "QIANFAN-179",
+      "satnum": 69396,
+      "raan_deg": 354.4081,
+      "mean_motion_rev_per_day": 13.51016268,
+      "altitude_km_at_reference": 1071.043,
+      "bstar": -3.5157e-06,
+      "new_name": "QIANFAN_5_6",
+      "plane": 5,
+      "slot": 6,
+      "phase_deg_at_reference": 178.175248
+    },
+    {
+      "original_name": "QIANFAN-178",
+      "satnum": 69395,
+      "raan_deg": 354.3985,
+      "mean_motion_rev_per_day": 13.51021211,
+      "altitude_km_at_reference": 1084.132,
+      "bstar": -1.7163000000000002e-06,
+      "new_name": "QIANFAN_5_7",
+      "plane": 5,
+      "slot": 7,
+      "phase_deg_at_reference": 218.435589
+    },
+    {
+      "original_name": "QIANFAN-176",
+      "satnum": 69393,
+      "raan_deg": 354.4439,
+      "mean_motion_rev_per_day": 13.51016389,
+      "altitude_km_at_reference": 1092.504,
+      "bstar": 0.00010434000000000001,
+      "new_name": "QIANFAN_5_8",
+      "plane": 5,
+      "slot": 8,
+      "phase_deg_at_reference": 238.456934
+    },
+    {
+      "original_name": "QIANFAN-175",
+      "satnum": 69392,
+      "raan_deg": 354.455,
+      "mean_motion_rev_per_day": 13.51015519,
+      "altitude_km_at_reference": 1097.954,
+      "bstar": 0.00011747000000000001,
+      "new_name": "QIANFAN_5_9",
+      "plane": 5,
+      "slot": 9,
+      "phase_deg_at_reference": 258.384084
+    },
+    {
+      "original_name": "QIANFAN-174",
+      "satnum": 69391,
+      "raan_deg": 354.4231,
+      "mean_motion_rev_per_day": 13.51025303,
+      "altitude_km_at_reference": 1098.324,
+      "bstar": 2.0481e-05,
+      "new_name": "QIANFAN_5_10",
+      "plane": 5,
+      "slot": 10,
+      "phase_deg_at_reference": 278.104473
+    },
+    {
+      "original_name": "QIANFAN-182",
+      "satnum": 69399,
+      "raan_deg": 354.4946,
+      "mean_motion_rev_per_day": 13.51023419,
+      "altitude_km_at_reference": 1093.712,
+      "bstar": 0.00012452,
+      "new_name": "QIANFAN_5_11",
+      "plane": 5,
+      "slot": 11,
+      "phase_deg_at_reference": 298.094831
+    },
+    {
+      "original_name": "QIANFAN-181",
+      "satnum": 69398,
+      "raan_deg": 354.5178,
+      "mean_motion_rev_per_day": 13.50930235,
+      "altitude_km_at_reference": 1079.577,
+      "bstar": 1.5902e-05,
+      "new_name": "QIANFAN_5_12",
+      "plane": 5,
+      "slot": 12,
+      "phase_deg_at_reference": 317.975221
+    },
+    {
+      "original_name": "QIANFAN-173",
+      "satnum": 69390,
+      "raan_deg": 354.4618,
+      "mean_motion_rev_per_day": 13.51038179,
+      "altitude_km_at_reference": 1077.238,
+      "bstar": 6.4301000000000005e-06,
+      "new_name": "QIANFAN_5_13",
+      "plane": 5,
+      "slot": 13,
+      "phase_deg_at_reference": 338.181539
+    },
+    {
+      "original_name": "QIANFAN-171",
+      "satnum": 69388,
+      "raan_deg": 354.4692,
+      "mean_motion_rev_per_day": 13.49905466,
+      "altitude_km_at_reference": 1070.875,
+      "bstar": 8.4466e-06,
+      "new_name": "QIANFAN_5_14",
+      "plane": 5,
+      "slot": 14,
+      "phase_deg_at_reference": 357.395061
+    },
+    {
+      "original_name": "QIANFAN-44",
+      "satnum": 62245,
+      "raan_deg": 15.2549,
+      "mean_motion_rev_per_day": 13.51026604,
+      "altitude_km_at_reference": 1081.31,
+      "bstar": 9.503300000000001e-05,
+      "new_name": "QIANFAN_6_1",
+      "plane": 6,
+      "slot": 1,
+      "phase_deg_at_reference": 2.298525
+    },
+    {
+      "original_name": "QIANFAN-47",
+      "satnum": 62248,
+      "raan_deg": 15.392,
+      "mean_motion_rev_per_day": 13.51025553,
+      "altitude_km_at_reference": 1080.741,
+      "bstar": 0.00010162,
+      "new_name": "QIANFAN_6_2",
+      "plane": 6,
+      "slot": 2,
+      "phase_deg_at_reference": 22.371879
+    },
+    {
+      "original_name": "QIANFAN-46",
+      "satnum": 62247,
+      "raan_deg": 15.4698,
+      "mean_motion_rev_per_day": 13.51026513,
+      "altitude_km_at_reference": 1081.379,
+      "bstar": 8.4993e-05,
+      "new_name": "QIANFAN_6_3",
+      "plane": 6,
+      "slot": 3,
+      "phase_deg_at_reference": 42.496596
+    },
+    {
+      "original_name": "QIANFAN-153",
+      "satnum": 69112,
+      "raan_deg": 14.9409,
+      "mean_motion_rev_per_day": 13.51021314,
+      "altitude_km_at_reference": 1076.419,
+      "bstar": 8.9079e-05,
+      "new_name": "QIANFAN_6_4",
+      "plane": 6,
+      "slot": 4,
+      "phase_deg_at_reference": 53.281418
+    },
+    {
+      "original_name": "QIANFAN-150",
+      "satnum": 69109,
+      "raan_deg": 14.9475,
+      "mean_motion_rev_per_day": 13.51020984,
+      "altitude_km_at_reference": 1080.043,
+      "bstar": 6.07e-05,
+      "new_name": "QIANFAN_6_5",
+      "plane": 6,
+      "slot": 5,
+      "phase_deg_at_reference": 73.293987
+    },
+    {
+      "original_name": "QIANFAN-52",
+      "satnum": 62253,
+      "raan_deg": 15.2794,
+      "mean_motion_rev_per_day": 13.51027424,
+      "altitude_km_at_reference": 1080.107,
+      "bstar": 8.3189e-05,
+      "new_name": "QIANFAN_6_6",
+      "plane": 6,
+      "slot": 6,
+      "phase_deg_at_reference": 82.329576
+    },
+    {
+      "original_name": "QIANFAN-147",
+      "satnum": 69106,
+      "raan_deg": 14.983,
+      "mean_motion_rev_per_day": 13.51021427,
+      "altitude_km_at_reference": 1080.872,
+      "bstar": 6.7718e-05,
+      "new_name": "QIANFAN_6_7",
+      "plane": 6,
+      "slot": 7,
+      "phase_deg_at_reference": 92.506745
+    },
+    {
+      "original_name": "QIANFAN-149",
+      "satnum": 69108,
+      "raan_deg": 14.9963,
+      "mean_motion_rev_per_day": 13.51020363,
+      "altitude_km_at_reference": 1078.679,
+      "bstar": 8.706000000000001e-05,
+      "new_name": "QIANFAN_6_8",
+      "plane": 6,
+      "slot": 8,
+      "phase_deg_at_reference": 113.278948
+    },
+    {
+      "original_name": "QIANFAN-38",
+      "satnum": 62239,
+      "raan_deg": 15.4274,
+      "mean_motion_rev_per_day": 13.51025402,
+      "altitude_km_at_reference": 1069.86,
+      "bstar": 8.7297e-05,
+      "new_name": "QIANFAN_6_9",
+      "plane": 6,
+      "slot": 9,
+      "phase_deg_at_reference": 122.552908
+    },
+    {
+      "original_name": "QIANFAN-145",
+      "satnum": 69104,
+      "raan_deg": 14.9799,
+      "mean_motion_rev_per_day": 13.51086512,
+      "altitude_km_at_reference": 1074.444,
+      "bstar": 7.7997e-05,
+      "new_name": "QIANFAN_6_10",
+      "plane": 6,
+      "slot": 10,
+      "phase_deg_at_reference": 132.714166
+    },
+    {
+      "original_name": "QIANFAN-50",
+      "satnum": 62251,
+      "raan_deg": 15.439,
+      "mean_motion_rev_per_day": 13.51026487,
+      "altitude_km_at_reference": 1062.456,
+      "bstar": 9.2067e-05,
+      "new_name": "QIANFAN_6_11",
+      "plane": 6,
+      "slot": 11,
+      "phase_deg_at_reference": 142.692166
+    },
+    {
+      "original_name": "QIANFAN-148",
+      "satnum": 69107,
+      "raan_deg": 14.9758,
+      "mean_motion_rev_per_day": 13.51020865,
+      "altitude_km_at_reference": 1071.013,
+      "bstar": 9.4048e-05,
+      "new_name": "QIANFAN_6_12",
+      "plane": 6,
+      "slot": 12,
+      "phase_deg_at_reference": 152.983313
+    },
+    {
+      "original_name": "QIANFAN-45",
+      "satnum": 62246,
+      "raan_deg": 15.4064,
+      "mean_motion_rev_per_day": 13.51025427,
+      "altitude_km_at_reference": 1059.588,
+      "bstar": 9.1119e-05,
+      "new_name": "QIANFAN_6_13",
+      "plane": 6,
+      "slot": 13,
+      "phase_deg_at_reference": 162.600841
+    },
+    {
+      "original_name": "QIANFAN-161",
+      "satnum": 69120,
+      "raan_deg": 14.8709,
+      "mean_motion_rev_per_day": 13.5103517,
+      "altitude_km_at_reference": 1070.433,
+      "bstar": 9.7465e-05,
+      "new_name": "QIANFAN_6_14",
+      "plane": 6,
+      "slot": 14,
+      "phase_deg_at_reference": 172.759108
+    },
+    {
+      "original_name": "QIANFAN-53",
+      "satnum": 62254,
+      "raan_deg": 15.398,
+      "mean_motion_rev_per_day": 13.5102444,
+      "altitude_km_at_reference": 1061.323,
+      "bstar": 8.5581e-05,
+      "new_name": "QIANFAN_6_15",
+      "plane": 6,
+      "slot": 15,
+      "phase_deg_at_reference": 182.598879
+    },
+    {
+      "original_name": "QIANFAN-160",
+      "satnum": 69119,
+      "raan_deg": 14.9564,
+      "mean_motion_rev_per_day": 13.51020106,
+      "altitude_km_at_reference": 1073.851,
+      "bstar": 9.587900000000001e-05,
+      "new_name": "QIANFAN_6_16",
+      "plane": 6,
+      "slot": 16,
+      "phase_deg_at_reference": 192.839496
+    },
+    {
+      "original_name": "QIANFAN-48",
+      "satnum": 62249,
+      "raan_deg": 15.4002,
+      "mean_motion_rev_per_day": 13.51019826,
+      "altitude_km_at_reference": 1066.02,
+      "bstar": 0.00010778,
+      "new_name": "QIANFAN_6_17",
+      "plane": 6,
+      "slot": 17,
+      "phase_deg_at_reference": 202.846074
+    },
+    {
+      "original_name": "QIANFAN-162",
+      "satnum": 69121,
+      "raan_deg": 14.8996,
+      "mean_motion_rev_per_day": 13.51040215,
+      "altitude_km_at_reference": 1081.74,
+      "bstar": 9.3318e-05,
+      "new_name": "QIANFAN_6_18",
+      "plane": 6,
+      "slot": 18,
+      "phase_deg_at_reference": 213.33411
+    },
+    {
+      "original_name": "QIANFAN-51",
+      "satnum": 62252,
+      "raan_deg": 15.4113,
+      "mean_motion_rev_per_day": 13.5102561,
+      "altitude_km_at_reference": 1078.938,
+      "bstar": 9.0532e-05,
+      "new_name": "QIANFAN_6_19",
+      "plane": 6,
+      "slot": 19,
+      "phase_deg_at_reference": 222.766477
+    },
+    {
+      "original_name": "QIANFAN-158",
+      "satnum": 69117,
+      "raan_deg": 14.915,
+      "mean_motion_rev_per_day": 13.51031854,
+      "altitude_km_at_reference": 1090.251,
+      "bstar": 7.6785e-05,
+      "new_name": "QIANFAN_6_20",
+      "plane": 6,
+      "slot": 20,
+      "phase_deg_at_reference": 233.052561
+    },
+    {
+      "original_name": "QIANFAN-37",
+      "satnum": 62238,
+      "raan_deg": 15.4892,
+      "mean_motion_rev_per_day": 13.51026951,
+      "altitude_km_at_reference": 1094.342,
+      "bstar": 7.5752e-05,
+      "new_name": "QIANFAN_6_21",
+      "plane": 6,
+      "slot": 21,
+      "phase_deg_at_reference": 242.797507
+    },
+    {
+      "original_name": "QIANFAN-156",
+      "satnum": 69115,
+      "raan_deg": 14.9467,
+      "mean_motion_rev_per_day": 13.51033625,
+      "altitude_km_at_reference": 1096.746,
+      "bstar": 8.027300000000001e-05,
+      "new_name": "QIANFAN_6_22",
+      "plane": 6,
+      "slot": 22,
+      "phase_deg_at_reference": 253.275673
+    },
+    {
+      "original_name": "QIANFAN-49",
+      "satnum": 62250,
+      "raan_deg": 15.4119,
+      "mean_motion_rev_per_day": 13.51027068,
+      "altitude_km_at_reference": 1098.483,
+      "bstar": 7.334400000000001e-05,
+      "new_name": "QIANFAN_6_23",
+      "plane": 6,
+      "slot": 23,
+      "phase_deg_at_reference": 262.625549
+    },
+    {
+      "original_name": "QIANFAN-159",
+      "satnum": 69118,
+      "raan_deg": 14.9243,
+      "mean_motion_rev_per_day": 13.51019903,
+      "altitude_km_at_reference": 1098.747,
+      "bstar": -4.4969e-06,
+      "new_name": "QIANFAN_6_24",
+      "plane": 6,
+      "slot": 24,
+      "phase_deg_at_reference": 273.360271
+    },
+    {
+      "original_name": "QIANFAN-41",
+      "satnum": 62242,
+      "raan_deg": 15.3774,
+      "mean_motion_rev_per_day": 13.51026682,
+      "altitude_km_at_reference": 1102.0,
+      "bstar": 7.518700000000001e-05,
+      "new_name": "QIANFAN_6_25",
+      "plane": 6,
+      "slot": 25,
+      "phase_deg_at_reference": 282.719719
+    },
+    {
+      "original_name": "QIANFAN-151",
+      "satnum": 69110,
+      "raan_deg": 14.9684,
+      "mean_motion_rev_per_day": 13.51016167,
+      "altitude_km_at_reference": 1095.491,
+      "bstar": 7.953e-05,
+      "new_name": "QIANFAN_6_26",
+      "plane": 6,
+      "slot": 26,
+      "phase_deg_at_reference": 292.439261
+    },
+    {
+      "original_name": "QIANFAN-43",
+      "satnum": 62244,
+      "raan_deg": 15.4471,
+      "mean_motion_rev_per_day": 13.51026294,
+      "altitude_km_at_reference": 1099.385,
+      "bstar": 6.9474e-05,
+      "new_name": "QIANFAN_6_27",
+      "plane": 6,
+      "slot": 27,
+      "phase_deg_at_reference": 302.689576
+    },
+    {
+      "original_name": "QIANFAN-157",
+      "satnum": 69116,
+      "raan_deg": 14.8757,
+      "mean_motion_rev_per_day": 13.51008718,
+      "altitude_km_at_reference": 1084.688,
+      "bstar": 6.322400000000001e-06,
+      "new_name": "QIANFAN_6_28",
+      "plane": 6,
+      "slot": 28,
+      "phase_deg_at_reference": 312.479521
+    },
+    {
+      "original_name": "QIANFAN-40",
+      "satnum": 62241,
+      "raan_deg": 15.0804,
+      "mean_motion_rev_per_day": 13.5102567,
+      "altitude_km_at_reference": 1091.87,
+      "bstar": 0.00011871,
+      "new_name": "QIANFAN_6_29",
+      "plane": 6,
+      "slot": 29,
+      "phase_deg_at_reference": 322.54386
+    },
+    {
+      "original_name": "QIANFAN-54",
+      "satnum": 62255,
+      "raan_deg": 15.0571,
+      "mean_motion_rev_per_day": 13.51026182,
+      "altitude_km_at_reference": 1077.025,
+      "bstar": 9.3664e-05,
+      "new_name": "QIANFAN_6_30",
+      "plane": 6,
+      "slot": 30,
+      "phase_deg_at_reference": 342.329561
+    },
+    {
+      "original_name": "QIANFAN-155",
+      "satnum": 69114,
+      "raan_deg": 14.9511,
+      "mean_motion_rev_per_day": 13.51034245,
+      "altitude_km_at_reference": 1073.172,
+      "bstar": 9.5261e-05,
+      "new_name": "QIANFAN_6_31",
+      "plane": 6,
+      "slot": 31,
+      "phase_deg_at_reference": 353.14015
+    },
+    {
+      "original_name": "QIANFAN-98",
+      "satnum": 66040,
+      "raan_deg": 35.7584,
+      "mean_motion_rev_per_day": 13.51017915,
+      "altitude_km_at_reference": 1070.64,
+      "bstar": 2.9738e-05,
+      "new_name": "QIANFAN_7_1",
+      "plane": 7,
+      "slot": 1,
+      "phase_deg_at_reference": 6.828105
+    },
+    {
+      "original_name": "QIANFAN-100",
+      "satnum": 66042,
+      "raan_deg": 35.9751,
+      "mean_motion_rev_per_day": 13.51017767,
+      "altitude_km_at_reference": 1071.224,
+      "bstar": 2.6963e-05,
+      "new_name": "QIANFAN_7_2",
+      "plane": 7,
+      "slot": 2,
+      "phase_deg_at_reference": 27.132555
+    },
+    {
+      "original_name": "QIANFAN-97",
+      "satnum": 66039,
+      "raan_deg": 36.0361,
+      "mean_motion_rev_per_day": 13.51018545,
+      "altitude_km_at_reference": 1074.699,
+      "bstar": 5.1123e-05,
+      "new_name": "QIANFAN_7_3",
+      "plane": 7,
+      "slot": 3,
+      "phase_deg_at_reference": 46.819168
+    },
+    {
+      "original_name": "QIANFAN-93",
+      "satnum": 66035,
+      "raan_deg": 36.0658,
+      "mean_motion_rev_per_day": 13.51019114,
+      "altitude_km_at_reference": 1078.795,
+      "bstar": 4.4276e-05,
+      "new_name": "QIANFAN_7_4",
+      "plane": 7,
+      "slot": 4,
+      "phase_deg_at_reference": 67.122431
+    },
+    {
+      "original_name": "QIANFAN-95",
+      "satnum": 66037,
+      "raan_deg": 35.5089,
+      "mean_motion_rev_per_day": 13.51019598,
+      "altitude_km_at_reference": 1080.813,
+      "bstar": 6.306000000000001e-05,
+      "new_name": "QIANFAN_7_5",
+      "plane": 7,
+      "slot": 5,
+      "phase_deg_at_reference": 86.993287
+    },
+    {
+      "original_name": "QIANFAN-92",
+      "satnum": 66034,
+      "raan_deg": 36.0106,
+      "mean_motion_rev_per_day": 13.51027051,
+      "altitude_km_at_reference": 1079.646,
+      "bstar": 7.3558e-05,
+      "new_name": "QIANFAN_7_6",
+      "plane": 7,
+      "slot": 6,
+      "phase_deg_at_reference": 106.87312
+    },
+    {
+      "original_name": "QIANFAN-94",
+      "satnum": 66036,
+      "raan_deg": 35.9678,
+      "mean_motion_rev_per_day": 13.51018788,
+      "altitude_km_at_reference": 1076.03,
+      "bstar": 5.6161000000000007e-05,
+      "new_name": "QIANFAN_7_7",
+      "plane": 7,
+      "slot": 7,
+      "phase_deg_at_reference": 127.002838
+    },
+    {
+      "original_name": "QIANFAN-91",
+      "satnum": 66033,
+      "raan_deg": 36.0362,
+      "mean_motion_rev_per_day": 13.51026837,
+      "altitude_km_at_reference": 1071.96,
+      "bstar": 6.5823e-05,
+      "new_name": "QIANFAN_7_8",
+      "plane": 7,
+      "slot": 8,
+      "phase_deg_at_reference": 146.956556
+    },
+    {
+      "original_name": "QIANFAN-108",
+      "satnum": 66050,
+      "raan_deg": 36.0231,
+      "mean_motion_rev_per_day": 13.51018943,
+      "altitude_km_at_reference": 1070.444,
+      "bstar": 3.6512e-05,
+      "new_name": "QIANFAN_7_9",
+      "plane": 7,
+      "slot": 9,
+      "phase_deg_at_reference": 167.135865
+    },
+    {
+      "original_name": "QIANFAN-107",
+      "satnum": 66049,
+      "raan_deg": 36.0557,
+      "mean_motion_rev_per_day": 13.5102673,
+      "altitude_km_at_reference": 1072.809,
+      "bstar": 2.8432e-05,
+      "new_name": "QIANFAN_7_10",
+      "plane": 7,
+      "slot": 10,
+      "phase_deg_at_reference": 186.95595
+    },
+    {
+      "original_name": "QIANFAN-105",
+      "satnum": 66047,
+      "raan_deg": 35.8439,
+      "mean_motion_rev_per_day": 13.51023788,
+      "altitude_km_at_reference": 1079.528,
+      "bstar": 4.8257e-05,
+      "new_name": "QIANFAN_7_11",
+      "plane": 7,
+      "slot": 11,
+      "phase_deg_at_reference": 207.115232
+    },
+    {
+      "original_name": "QIANFAN-106",
+      "satnum": 66048,
+      "raan_deg": 36.0129,
+      "mean_motion_rev_per_day": 13.51027588,
+      "altitude_km_at_reference": 1087.767,
+      "bstar": 4.0414e-05,
+      "new_name": "QIANFAN_7_12",
+      "plane": 7,
+      "slot": 12,
+      "phase_deg_at_reference": 226.919036
+    },
+    {
+      "original_name": "QIANFAN-104",
+      "satnum": 66046,
+      "raan_deg": 35.9701,
+      "mean_motion_rev_per_day": 13.51024004,
+      "altitude_km_at_reference": 1095.368,
+      "bstar": 4.562e-05,
+      "new_name": "QIANFAN_7_13",
+      "plane": 7,
+      "slot": 13,
+      "phase_deg_at_reference": 247.233917
+    },
+    {
+      "original_name": "QIANFAN-103",
+      "satnum": 66045,
+      "raan_deg": 36.0875,
+      "mean_motion_rev_per_day": 13.51018816,
+      "altitude_km_at_reference": 1098.945,
+      "bstar": 5.4001999999999996e-05,
+      "new_name": "QIANFAN_7_14",
+      "plane": 7,
+      "slot": 14,
+      "phase_deg_at_reference": 267.065881
+    },
+    {
+      "original_name": "QIANFAN-102",
+      "satnum": 66044,
+      "raan_deg": 35.946,
+      "mean_motion_rev_per_day": 13.51017978,
+      "altitude_km_at_reference": 1096.893,
+      "bstar": 4.7455000000000006e-05,
+      "new_name": "QIANFAN_7_15",
+      "plane": 7,
+      "slot": 15,
+      "phase_deg_at_reference": 286.85113
+    },
+    {
+      "original_name": "QIANFAN-96",
+      "satnum": 66038,
+      "raan_deg": 36.0555,
+      "mean_motion_rev_per_day": 13.51026275,
+      "altitude_km_at_reference": 1081.921,
+      "bstar": 1.5518000000000003e-05,
+      "new_name": "QIANFAN_7_16",
+      "plane": 7,
+      "slot": 16,
+      "phase_deg_at_reference": 326.691597
+    },
+    {
+      "original_name": "QIANFAN-99",
+      "satnum": 66041,
+      "raan_deg": 36.0617,
+      "mean_motion_rev_per_day": 13.51018088,
+      "altitude_km_at_reference": 1074.261,
+      "bstar": 2.8726000000000002e-05,
+      "new_name": "QIANFAN_7_17",
+      "plane": 7,
+      "slot": 17,
+      "phase_deg_at_reference": 346.911334
+    },
+    {
+      "original_name": "QIANFAN-62",
+      "satnum": 62792,
+      "raan_deg": 76.3967,
+      "mean_motion_rev_per_day": 13.5101842,
+      "altitude_km_at_reference": 1063.624,
+      "bstar": 7.2217e-05,
+      "new_name": "QIANFAN_8_1",
+      "plane": 8,
+      "slot": 1,
+      "phase_deg_at_reference": 16.195226
+    },
+    {
+      "original_name": "QIANFAN-61",
+      "satnum": 62791,
+      "raan_deg": 76.667,
+      "mean_motion_rev_per_day": 13.5102592,
+      "altitude_km_at_reference": 1069.916,
+      "bstar": 6.942700000000001e-05,
+      "new_name": "QIANFAN_8_2",
+      "plane": 8,
+      "slot": 2,
+      "phase_deg_at_reference": 36.176449
+    },
+    {
+      "original_name": "QIANFAN-64",
+      "satnum": 62794,
+      "raan_deg": 76.3061,
+      "mean_motion_rev_per_day": 13.51025925,
+      "altitude_km_at_reference": 1078.076,
+      "bstar": 8.380900000000001e-05,
+      "new_name": "QIANFAN_8_3",
+      "plane": 8,
+      "slot": 3,
+      "phase_deg_at_reference": 56.090859
+    },
+    {
+      "original_name": "QIANFAN-65",
+      "satnum": 62795,
+      "raan_deg": 76.3233,
+      "mean_motion_rev_per_day": 13.51022082,
+      "altitude_km_at_reference": 1084.894,
+      "bstar": 7.8751e-05,
+      "new_name": "QIANFAN_8_4",
+      "plane": 8,
+      "slot": 4,
+      "phase_deg_at_reference": 76.941684
+    },
+    {
+      "original_name": "QIANFAN-72",
+      "satnum": 62802,
+      "raan_deg": 76.3581,
+      "mean_motion_rev_per_day": 13.51019125,
+      "altitude_km_at_reference": 1088.618,
+      "bstar": 8.546700000000001e-05,
+      "new_name": "QIANFAN_8_5",
+      "plane": 8,
+      "slot": 5,
+      "phase_deg_at_reference": 96.292499
+    },
+    {
+      "original_name": "QIANFAN-58",
+      "satnum": 62788,
+      "raan_deg": 76.2748,
+      "mean_motion_rev_per_day": 13.51018659,
+      "altitude_km_at_reference": 1087.77,
+      "bstar": 8.5376e-05,
+      "new_name": "QIANFAN_8_6",
+      "plane": 8,
+      "slot": 6,
+      "phase_deg_at_reference": 116.232988
+    },
+    {
+      "original_name": "QIANFAN-56",
+      "satnum": 62786,
+      "raan_deg": 76.2883,
+      "mean_motion_rev_per_day": 13.51026543,
+      "altitude_km_at_reference": 1085.781,
+      "bstar": 8.7364e-05,
+      "new_name": "QIANFAN_8_7",
+      "plane": 8,
+      "slot": 7,
+      "phase_deg_at_reference": 136.453295
+    },
+    {
+      "original_name": "QIANFAN-70",
+      "satnum": 62800,
+      "raan_deg": 76.4071,
+      "mean_motion_rev_per_day": 13.51021896,
+      "altitude_km_at_reference": 1081.445,
+      "bstar": 8.0463e-05,
+      "new_name": "QIANFAN_8_8",
+      "plane": 8,
+      "slot": 8,
+      "phase_deg_at_reference": 156.266978
+    },
+    {
+      "original_name": "QIANFAN-71",
+      "satnum": 62801,
+      "raan_deg": 76.3715,
+      "mean_motion_rev_per_day": 13.51025368,
+      "altitude_km_at_reference": 1081.133,
+      "bstar": 6.963700000000001e-05,
+      "new_name": "QIANFAN_8_9",
+      "plane": 8,
+      "slot": 9,
+      "phase_deg_at_reference": 176.216512
+    },
+    {
+      "original_name": "QIANFAN-60",
+      "satnum": 62790,
+      "raan_deg": 76.3333,
+      "mean_motion_rev_per_day": 13.51026192,
+      "altitude_km_at_reference": 1082.119,
+      "bstar": 7.4354e-05,
+      "new_name": "QIANFAN_8_10",
+      "plane": 8,
+      "slot": 10,
+      "phase_deg_at_reference": 196.27359
+    },
+    {
+      "original_name": "QIANFAN-55",
+      "satnum": 62785,
+      "raan_deg": 76.5223,
+      "mean_motion_rev_per_day": 13.51023446,
+      "altitude_km_at_reference": 1087.361,
+      "bstar": 4.8606e-05,
+      "new_name": "QIANFAN_8_11",
+      "plane": 8,
+      "slot": 11,
+      "phase_deg_at_reference": 215.687832
+    },
+    {
+      "original_name": "QIANFAN-69",
+      "satnum": 62799,
+      "raan_deg": 76.2168,
+      "mean_motion_rev_per_day": 13.51022891,
+      "altitude_km_at_reference": 1090.905,
+      "bstar": 7.621400000000001e-05,
+      "new_name": "QIANFAN_8_12",
+      "plane": 8,
+      "slot": 12,
+      "phase_deg_at_reference": 236.696316
+    },
+    {
+      "original_name": "QIANFAN-63",
+      "satnum": 62793,
+      "raan_deg": 76.3708,
+      "mean_motion_rev_per_day": 13.51021531,
+      "altitude_km_at_reference": 1093.288,
+      "bstar": 8.2711e-05,
+      "new_name": "QIANFAN_8_13",
+      "plane": 8,
+      "slot": 13,
+      "phase_deg_at_reference": 256.100623
+    },
+    {
+      "original_name": "QIANFAN-67",
+      "satnum": 62797,
+      "raan_deg": 76.3486,
+      "mean_motion_rev_per_day": 13.51027593,
+      "altitude_km_at_reference": 1090.791,
+      "bstar": 8.8361e-05,
+      "new_name": "QIANFAN_8_14",
+      "plane": 8,
+      "slot": 14,
+      "phase_deg_at_reference": 276.258081
+    },
+    {
+      "original_name": "QIANFAN-66",
+      "satnum": 62796,
+      "raan_deg": 76.3487,
+      "mean_motion_rev_per_day": 13.51027808,
+      "altitude_km_at_reference": 1083.57,
+      "bstar": 7.5898e-05,
+      "new_name": "QIANFAN_8_15",
+      "plane": 8,
+      "slot": 15,
+      "phase_deg_at_reference": 296.47376
+    },
+    {
+      "original_name": "QIANFAN-68",
+      "satnum": 62798,
+      "raan_deg": 76.4038,
+      "mean_motion_rev_per_day": 13.51020345,
+      "altitude_km_at_reference": 1075.1,
+      "bstar": 7.4281e-05,
+      "new_name": "QIANFAN_8_16",
+      "plane": 8,
+      "slot": 16,
+      "phase_deg_at_reference": 316.396757
+    },
+    {
+      "original_name": "QIANFAN-57",
+      "satnum": 62787,
+      "raan_deg": 76.5262,
+      "mean_motion_rev_per_day": 13.51026199,
+      "altitude_km_at_reference": 1078.583,
+      "bstar": 4.054e-05,
+      "new_name": "QIANFAN_8_17",
+      "plane": 8,
+      "slot": 17,
+      "phase_deg_at_reference": 335.586956
+    },
+    {
+      "original_name": "QIANFAN-59",
+      "satnum": 62789,
+      "raan_deg": 76.4142,
+      "mean_motion_rev_per_day": 13.51022914,
+      "altitude_km_at_reference": 1063.001,
+      "bstar": 5.6389000000000005e-05,
+      "new_name": "QIANFAN_8_18",
+      "plane": 8,
+      "slot": 18,
+      "phase_deg_at_reference": 356.557808
+    }
+  ],
+  "exclusions": [
+    {
+      "original_name": "QIANFAN-7",
+      "satnum": 60385,
+      "raan_deg": 263.4591,
+      "mean_motion_rev_per_day": 14.27887701,
+      "altitude_km_at_reference": 821.613,
+      "bstar": 7.721e-05,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-19",
+      "satnum": 61552,
+      "raan_deg": 48.4664,
+      "mean_motion_rev_per_day": 14.14518087,
+      "altitude_km_at_reference": 856.872,
+      "bstar": 0.00017505000000000003,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-20",
+      "satnum": 61553,
+      "raan_deg": 49.0488,
+      "mean_motion_rev_per_day": 14.09058525,
+      "altitude_km_at_reference": 887.222,
+      "bstar": 0.0001987,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-21",
+      "satnum": 61554,
+      "raan_deg": 46.8544,
+      "mean_motion_rev_per_day": 14.22913963,
+      "altitude_km_at_reference": 832.462,
+      "bstar": 0.00020192,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-22",
+      "satnum": 61555,
+      "raan_deg": 51.0642,
+      "mean_motion_rev_per_day": 13.86422227,
+      "altitude_km_at_reference": 957.147,
+      "bstar": 0.00016482,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-23",
+      "satnum": 61556,
+      "raan_deg": 48.1602,
+      "mean_motion_rev_per_day": 14.16540345,
+      "altitude_km_at_reference": 860.78,
+      "bstar": 0.00015233,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-24",
+      "satnum": 61557,
+      "raan_deg": 47.1436,
+      "mean_motion_rev_per_day": 14.24137641,
+      "altitude_km_at_reference": 813.404,
+      "bstar": 0.00021159,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-25",
+      "satnum": 61558,
+      "raan_deg": 49.0838,
+      "mean_motion_rev_per_day": 14.06115004,
+      "altitude_km_at_reference": 887.667,
+      "bstar": 0.00020268,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-26",
+      "satnum": 61559,
+      "raan_deg": 51.9925,
+      "mean_motion_rev_per_day": 13.77937271,
+      "altitude_km_at_reference": 971.059,
+      "bstar": 0.00017460000000000002,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-27",
+      "satnum": 61560,
+      "raan_deg": 46.7938,
+      "mean_motion_rev_per_day": 14.27585636,
+      "altitude_km_at_reference": 799.415,
+      "bstar": 0.00019554,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-28",
+      "satnum": 61561,
+      "raan_deg": 46.8107,
+      "mean_motion_rev_per_day": 14.28462439,
+      "altitude_km_at_reference": 826.067,
+      "bstar": 0.00023831,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-29",
+      "satnum": 61562,
+      "raan_deg": 54.7215,
+      "mean_motion_rev_per_day": 13.51088151,
+      "altitude_km_at_reference": 1076.361,
+      "bstar": 2.9820000000000002e-05,
+      "reasons": [
+        "sparse_orbital_plane"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-30",
+      "satnum": 61563,
+      "raan_deg": 54.3508,
+      "mean_motion_rev_per_day": 13.50070439,
+      "altitude_km_at_reference": 1075.938,
+      "bstar": 0.00020685999999999998,
+      "reasons": [
+        "sparse_orbital_plane"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-31",
+      "satnum": 61564,
+      "raan_deg": 53.7439,
+      "mean_motion_rev_per_day": 13.58057779,
+      "altitude_km_at_reference": 1056.641,
+      "bstar": 0.00018126,
+      "reasons": [
+        "sparse_orbital_plane"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-32",
+      "satnum": 61565,
+      "raan_deg": 54.5554,
+      "mean_motion_rev_per_day": 13.50801924,
+      "altitude_km_at_reference": 1077.139,
+      "bstar": 0.0001607,
+      "reasons": [
+        "sparse_orbital_plane"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-33",
+      "satnum": 61566,
+      "raan_deg": 50.1291,
+      "mean_motion_rev_per_day": 13.96740202,
+      "altitude_km_at_reference": 911.16,
+      "bstar": 3.8023000000000005e-05,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-34",
+      "satnum": 61567,
+      "raan_deg": 49.355,
+      "mean_motion_rev_per_day": 14.02505329,
+      "altitude_km_at_reference": 896.1,
+      "bstar": 0.00018389,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-35",
+      "satnum": 61568,
+      "raan_deg": 46.6943,
+      "mean_motion_rev_per_day": 14.28337048,
+      "altitude_km_at_reference": 813.374,
+      "bstar": 0.00022642000000000002,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-36",
+      "satnum": 61569,
+      "raan_deg": 54.2436,
+      "mean_motion_rev_per_day": 13.5564457,
+      "altitude_km_at_reference": 1059.503,
+      "bstar": 8.6952e-05,
+      "reasons": [
+        "sparse_orbital_plane"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-39",
+      "satnum": 62240,
+      "raan_deg": 8.0243,
+      "mean_motion_rev_per_day": 14.25547592,
+      "altitude_km_at_reference": 813.291,
+      "bstar": 0.00012237,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-42",
+      "satnum": 62243,
+      "raan_deg": 8.1071,
+      "mean_motion_rev_per_day": 14.24635341,
+      "altitude_km_at_reference": 825.094,
+      "bstar": 0.00011605,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-77",
+      "satnum": 63163,
+      "raan_deg": 289.3284,
+      "mean_motion_rev_per_day": 13.96242357,
+      "altitude_km_at_reference": 916.266,
+      "bstar": 0.00015453,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-83",
+      "satnum": 63169,
+      "raan_deg": 292.5008,
+      "mean_motion_rev_per_day": 13.62062007,
+      "altitude_km_at_reference": 1035.566,
+      "bstar": 0.00015583,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-101",
+      "satnum": 66043,
+      "raan_deg": 32.451,
+      "mean_motion_rev_per_day": 14.26846955,
+      "altitude_km_at_reference": 821.86,
+      "bstar": 0.00017163,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-109",
+      "satnum": 68636,
+      "raan_deg": 313.8035,
+      "mean_motion_rev_per_day": 13.47824006,
+      "altitude_km_at_reference": 1095.397,
+      "bstar": -3.2641,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-135",
+      "satnum": 69081,
+      "raan_deg": 334.2708,
+      "mean_motion_rev_per_day": 13.47836285,
+      "altitude_km_at_reference": 1086.406,
+      "bstar": -3.2891,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-146",
+      "satnum": 69105,
+      "raan_deg": 14.8203,
+      "mean_motion_rev_per_day": 13.49110633,
+      "altitude_km_at_reference": 1080.854,
+      "bstar": -3.5413,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-152",
+      "satnum": 69111,
+      "raan_deg": 14.963,
+      "mean_motion_rev_per_day": 13.47801949,
+      "altitude_km_at_reference": 1087.949,
+      "bstar": -3.2915,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-154",
+      "satnum": 69113,
+      "raan_deg": 14.9861,
+      "mean_motion_rev_per_day": 13.47797753,
+      "altitude_km_at_reference": 1089.98,
+      "bstar": -3.2887,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-168",
+      "satnum": 69385,
+      "raan_deg": 354.494,
+      "mean_motion_rev_per_day": 13.47888714,
+      "altitude_km_at_reference": 1099.983,
+      "bstar": -3.2874999999999996,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-169",
+      "satnum": 69386,
+      "raan_deg": 354.4936,
+      "mean_motion_rev_per_day": 13.47856086,
+      "altitude_km_at_reference": 1096.85,
+      "bstar": -3.2901999999999996,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-170",
+      "satnum": 69387,
+      "raan_deg": 354.4924,
+      "mean_motion_rev_per_day": 13.47970879,
+      "altitude_km_at_reference": 1092.066,
+      "bstar": -3.5585,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-177",
+      "satnum": 69394,
+      "raan_deg": 354.4286,
+      "mean_motion_rev_per_day": 13.48762095,
+      "altitude_km_at_reference": 1082.319,
+      "bstar": -3.5509000000000004,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-186",
+      "satnum": 69404,
+      "raan_deg": 272.8476,
+      "mean_motion_rev_per_day": 13.4872794,
+      "altitude_km_at_reference": 1099.506,
+      "bstar": -3.4118,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-187",
+      "satnum": 69405,
+      "raan_deg": 272.8242,
+      "mean_motion_rev_per_day": 13.48559085,
+      "altitude_km_at_reference": 1102.193,
+      "bstar": -2.9949,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-199",
+      "satnum": 69417,
+      "raan_deg": 272.7413,
+      "mean_motion_rev_per_day": 13.51475831,
+      "altitude_km_at_reference": 1084.796,
+      "bstar": -3.423,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-201",
+      "satnum": 69800,
+      "raan_deg": 354.1952,
+      "mean_motion_rev_per_day": 14.09643589,
+      "altitude_km_at_reference": 865.836,
+      "bstar": -1.1643000000000001,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-202",
+      "satnum": 69801,
+      "raan_deg": 354.1836,
+      "mean_motion_rev_per_day": 14.14353745,
+      "altitude_km_at_reference": 860.778,
+      "bstar": 0.00020379,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-203",
+      "satnum": 69802,
+      "raan_deg": 354.2159,
+      "mean_motion_rev_per_day": 14.11312587,
+      "altitude_km_at_reference": 852.643,
+      "bstar": 0.00022917000000000003,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-204",
+      "satnum": 69803,
+      "raan_deg": 354.2039,
+      "mean_motion_rev_per_day": 14.12796346,
+      "altitude_km_at_reference": 854.891,
+      "bstar": 0.00017295,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-205",
+      "satnum": 69804,
+      "raan_deg": 354.2195,
+      "mean_motion_rev_per_day": 14.10087833,
+      "altitude_km_at_reference": 891.123,
+      "bstar": 0.00017294,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-206",
+      "satnum": 69805,
+      "raan_deg": 354.1945,
+      "mean_motion_rev_per_day": 14.12292745,
+      "altitude_km_at_reference": 857.0,
+      "bstar": -1.1089,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-207",
+      "satnum": 69806,
+      "raan_deg": 354.2047,
+      "mean_motion_rev_per_day": 14.11287947,
+      "altitude_km_at_reference": 861.316,
+      "bstar": 0.00018497,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-208",
+      "satnum": 69807,
+      "raan_deg": 354.2081,
+      "mean_motion_rev_per_day": 14.15508835,
+      "altitude_km_at_reference": 870.247,
+      "bstar": 0.00018289,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-209",
+      "satnum": 69808,
+      "raan_deg": 354.2147,
+      "mean_motion_rev_per_day": 14.07220223,
+      "altitude_km_at_reference": 874.249,
+      "bstar": -1.2174,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-210",
+      "satnum": 69809,
+      "raan_deg": 354.2045,
+      "mean_motion_rev_per_day": 14.11490814,
+      "altitude_km_at_reference": 858.293,
+      "bstar": 0.00019093,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-211",
+      "satnum": 69810,
+      "raan_deg": 354.1964,
+      "mean_motion_rev_per_day": 14.10825699,
+      "altitude_km_at_reference": 857.286,
+      "bstar": -1.1397,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-212",
+      "satnum": 69811,
+      "raan_deg": 354.1979,
+      "mean_motion_rev_per_day": 14.13082526,
+      "altitude_km_at_reference": 849.034,
+      "bstar": 0.00020688000000000003,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-213",
+      "satnum": 69812,
+      "raan_deg": 354.1981,
+      "mean_motion_rev_per_day": 14.12641183,
+      "altitude_km_at_reference": 854.982,
+      "bstar": 0.00022393,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-214",
+      "satnum": 69813,
+      "raan_deg": 354.1644,
+      "mean_motion_rev_per_day": 14.16844493,
+      "altitude_km_at_reference": 859.467,
+      "bstar": 0.00021302,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-215",
+      "satnum": 69814,
+      "raan_deg": 354.1408,
+      "mean_motion_rev_per_day": 14.21796178,
+      "altitude_km_at_reference": 818.638,
+      "bstar": 0.00022482,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-216",
+      "satnum": 69815,
+      "raan_deg": 354.1831,
+      "mean_motion_rev_per_day": 14.14228561,
+      "altitude_km_at_reference": 849.556,
+      "bstar": -1.0808,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-217",
+      "satnum": 69816,
+      "raan_deg": 354.1201,
+      "mean_motion_rev_per_day": 14.23012373,
+      "altitude_km_at_reference": 818.928,
+      "bstar": -0.90736,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-218",
+      "satnum": 69817,
+      "raan_deg": 354.1217,
+      "mean_motion_rev_per_day": 14.23061308,
+      "altitude_km_at_reference": 819.844,
+      "bstar": -0.90695,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-219",
+      "satnum": 69848,
+      "raan_deg": 56.2557,
+      "mean_motion_rev_per_day": 13.71271711,
+      "altitude_km_at_reference": 1033.785,
+      "bstar": -2.4759,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-220",
+      "satnum": 69849,
+      "raan_deg": 56.2997,
+      "mean_motion_rev_per_day": 13.76455033,
+      "altitude_km_at_reference": 971.655,
+      "bstar": 3.5939e-05,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-221",
+      "satnum": 69850,
+      "raan_deg": 56.1573,
+      "mean_motion_rev_per_day": 14.01057632,
+      "altitude_km_at_reference": 909.824,
+      "bstar": -1.5203,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-222",
+      "satnum": 69851,
+      "raan_deg": 56.2956,
+      "mean_motion_rev_per_day": 13.68096175,
+      "altitude_km_at_reference": 1066.023,
+      "bstar": -2.5638,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-223",
+      "satnum": 69852,
+      "raan_deg": 56.2944,
+      "mean_motion_rev_per_day": 13.70093247,
+      "altitude_km_at_reference": 1054.346,
+      "bstar": -2.6612,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-224",
+      "satnum": 69853,
+      "raan_deg": 56.2605,
+      "mean_motion_rev_per_day": 13.72330294,
+      "altitude_km_at_reference": 1049.821,
+      "bstar": -2.442,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-225",
+      "satnum": 69854,
+      "raan_deg": 56.2834,
+      "mean_motion_rev_per_day": 13.65987935,
+      "altitude_km_at_reference": 1077.022,
+      "bstar": -2.6350000000000002,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-226",
+      "satnum": 69855,
+      "raan_deg": 56.2871,
+      "mean_motion_rev_per_day": 13.68516001,
+      "altitude_km_at_reference": 993.411,
+      "bstar": -2.5191999999999997,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-227",
+      "satnum": 69856,
+      "raan_deg": 56.2799,
+      "mean_motion_rev_per_day": 13.72323117,
+      "altitude_km_at_reference": 993.599,
+      "bstar": -2.3779,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-228",
+      "satnum": 69857,
+      "raan_deg": 56.2779,
+      "mean_motion_rev_per_day": 13.71081807,
+      "altitude_km_at_reference": 1037.534,
+      "bstar": -2.4305,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-229",
+      "satnum": 69858,
+      "raan_deg": 56.2591,
+      "mean_motion_rev_per_day": 13.73597866,
+      "altitude_km_at_reference": 1028.407,
+      "bstar": -2.3696,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-230",
+      "satnum": 69859,
+      "raan_deg": 56.2964,
+      "mean_motion_rev_per_day": 13.6992701,
+      "altitude_km_at_reference": 999.22,
+      "bstar": -2.5753,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-231",
+      "satnum": 69860,
+      "raan_deg": 56.2487,
+      "mean_motion_rev_per_day": 13.73610796,
+      "altitude_km_at_reference": 1031.883,
+      "bstar": -2.3591,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-232",
+      "satnum": 69861,
+      "raan_deg": 56.2442,
+      "mean_motion_rev_per_day": 13.74267985,
+      "altitude_km_at_reference": 985.267,
+      "bstar": -2.2769,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-233",
+      "satnum": 69862,
+      "raan_deg": 56.2534,
+      "mean_motion_rev_per_day": 13.73710817,
+      "altitude_km_at_reference": 981.24,
+      "bstar": -2.2992,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-234",
+      "satnum": 69863,
+      "raan_deg": 56.2361,
+      "mean_motion_rev_per_day": 13.80406504,
+      "altitude_km_at_reference": 960.856,
+      "bstar": -2.0359,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-235",
+      "satnum": 69864,
+      "raan_deg": 56.1179,
+      "mean_motion_rev_per_day": 14.09843184,
+      "altitude_km_at_reference": 871.82,
+      "bstar": 6.5323e-05,
+      "reasons": [
+        "outside_dominant_mean_motion_shell"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-236",
+      "satnum": 69865,
+      "raan_deg": 56.2651,
+      "mean_motion_rev_per_day": 13.70322196,
+      "altitude_km_at_reference": 993.178,
+      "bstar": -2.4041,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-237",
+      "satnum": 69866,
+      "raan_deg": 56.2437,
+      "mean_motion_rev_per_day": 13.76586425,
+      "altitude_km_at_reference": 980.059,
+      "bstar": -2.2054,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    },
+    {
+      "original_name": "QIANFAN-238",
+      "satnum": 69867,
+      "raan_deg": 56.2442,
+      "mean_motion_rev_per_day": 13.70233159,
+      "altitude_km_at_reference": 1003.294,
+      "bstar": -2.432,
+      "reasons": [
+        "bstar_outlier"
+      ]
+    }
+  ]
+}
