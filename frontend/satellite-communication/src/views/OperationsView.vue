@@ -625,7 +625,7 @@ function buildSelectedEntityInfo(entityId) {
     nodeType,
     typeLabel: nodeTypeLabel(nodeType),
     modelSrc: nodeType === "aircraft"
-      ? "/pictures/airplane%203d%20model_Clone1.glb"
+      ? "/pictures/aircraft-v1.glb"
       : nodeType === "ground_station"
       ? "/pictures/ground-station.glb"
       : "/pictures/tdrs.glb",
