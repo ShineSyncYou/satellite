@@ -16,7 +16,7 @@ AIRCRAFT_PATH_RGBA = [125, 211, 252, 255]
 GROUND_STATION_OUTLINE_RGBA = [15, 23, 42, 255]
 
 SATELLITE_MODEL_URI = "/tdrs.glb"
-AIRCRAFT_MODEL_URI = "/pictures/airplane%203d%20model_Clone1.glb"
+AIRCRAFT_MODEL_URI = "/pictures/aircraft-v1.glb"
 
 
 def parse_args() -> argparse.Namespace:

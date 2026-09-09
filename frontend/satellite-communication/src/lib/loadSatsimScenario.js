@@ -73,7 +73,7 @@ const SATELLITE_LEO_PROXY_WIDTH_PX = 54;
 const SATELLITE_LEO_PROXY_HEIGHT_PX = 36;
 const SATELLITE_GEO_PROXY_WIDTH_PX = 42;
 const SATELLITE_GEO_PROXY_HEIGHT_PX = 28;
-const AIRCRAFT_MODEL_URI = "/pictures/airplane%203d%20model_Clone1.glb";
+const AIRCRAFT_MODEL_URI = "/pictures/aircraft-v1.glb";
 const GROUND_STATION_MODEL_URI = "/pictures/radar.glb";
 const SATELLITE_MODEL_SILHOUETTE_COLOR = Cesium.Color.fromCssColorString("#ffe7a3");
 // 飞机尺寸集中配置：scale 控制物理模型大小，近/远像素值控制地图缩放时的视觉尺寸。
