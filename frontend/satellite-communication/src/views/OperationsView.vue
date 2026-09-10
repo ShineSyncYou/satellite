@@ -262,7 +262,6 @@ const selectedEntityId = ref("");                                     // 当前�
 const aircraftRoutes = ref([]);
 const focusedAircraftId = ref("");
 const modelViewerReady = ref(typeof window !== "undefined" && Boolean(window.customElements?.get("model-viewer")));
-const AIRCRAFT_MODEL_LOAD_TIMEOUT_MS = 30000;
 const modelPreviewError = ref(false);
 const isSpeedMenuOpen = ref(false);
 const currentScenarioRuntime = ref(null);
@@ -626,7 +625,7 @@ function buildSelectedEntityInfo(entityId) {
     nodeType,
     typeLabel: nodeTypeLabel(nodeType),
     modelSrc: nodeType === "aircraft"
-      ? "/pictures/aircraft-v1.glb"
+      ? "/pictures/aircraft-v5.glb"
       : nodeType === "ground_station"
       ? "/pictures/ground-station.glb"
       : "/pictures/tdrs.glb",
@@ -1331,12 +1330,10 @@ function waitForAircraftModelsReady() {
   return new Promise((resolve, reject) => {
     const boundingSphere = new Cesium.BoundingSphere();
     let settled = false;
-    let timeoutId = 0;
 
     const finish = (error) => {
       if (settled) return;
       settled = true;
-      clearTimeout(timeoutId);
       viewer?.scene?.postRender.removeEventListener(checkReady);
       if (error) {
         reject(error);
@@ -1357,7 +1354,7 @@ function waitForAircraftModelsReady() {
         boundingSphere,
       ));
       if (states.some((state) => state === Cesium.BoundingSphereState.FAILED)) {
-        finish(new Error("飞机模型加载失败，请检查 /pictures/aircraft-v1.glb。"));
+        finish(new Error("飞机模型加载失败，请检查 /pictures/aircraft-v5.glb。"));
         return;
       }
       if (states.every((state) => state === Cesium.BoundingSphereState.DONE)) {
@@ -1367,9 +1364,6 @@ function waitForAircraftModelsReady() {
       viewer.scene.requestRender();
     };
 
-    timeoutId = window.setTimeout(() => {
-      finish(new Error("飞机模型加载超时（30 秒）。"));
-    }, AIRCRAFT_MODEL_LOAD_TIMEOUT_MS);
     viewer.scene.postRender.addEventListener(checkReady);
     viewer.scene.requestRender();
   });
