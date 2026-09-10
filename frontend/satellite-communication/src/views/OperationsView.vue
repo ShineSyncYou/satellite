@@ -625,7 +625,7 @@ function buildSelectedEntityInfo(entityId) {
     nodeType,
     typeLabel: nodeTypeLabel(nodeType),
     modelSrc: nodeType === "aircraft"
-      ? "/pictures/aircraft-v1.glb"
+      ? "/pictures/aircraft-v5.glb"
       : nodeType === "ground_station"
       ? "/pictures/ground-station.glb"
       : "/pictures/tdrs.glb",
@@ -1354,7 +1354,7 @@ function waitForAircraftModelsReady() {
         boundingSphere,
       ));
       if (states.some((state) => state === Cesium.BoundingSphereState.FAILED)) {
-        finish(new Error("飞机模型加载失败，请检查 /pictures/aircraft-v1.glb。"));
+        finish(new Error("飞机模型加载失败，请检查 /pictures/aircraft-v5.glb。"));
         return;
       }
       if (states.every((state) => state === Cesium.BoundingSphereState.DONE)) {
