@@ -47,6 +47,7 @@ import * as Cesium from "cesium";
 import { onBeforeUnmount, onMounted } from "vue";
 import ProductScaffold from "../components/layout/ProductScaffold.vue";
 import AppIcon from "../components/icons/AppIcon.vue";
+import { scheduleSceneModelPreload } from "../lib/sceneModelAssets";
 import "../Widgets/widgets.css";
 
 let landingViewer = null;
@@ -174,6 +175,7 @@ function destroyLandingGlobe() {
 }
 
 onMounted(async () => {
+  scheduleSceneModelPreload();
   await initLandingGlobe();
 });
 

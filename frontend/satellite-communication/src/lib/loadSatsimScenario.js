@@ -24,6 +24,13 @@
  */
 
 import * as Cesium from "cesium";
+import {
+  AIRCRAFT_MODEL_URI,
+  GROUND_STATION_MODEL_URI,
+  SATELLITE_MODEL_URI,
+  getSceneModelUri,
+  preloadSceneModel,
+} from "./sceneModelAssets";
 import { normalizeTerminalOnlyRoute } from "./routePathPolicy";
 import { TOPOLOGY_LINK_STYLE } from "./satsimSceneStyle";
 
@@ -57,7 +64,6 @@ const HONEYCOMB_UPDATE_INTERVAL_MS = 80;
 const HONEYCOMB_PROJECTION_RAY_HEIGHT_M = 2000000;
 
 // ============= 模型资源 =============
-const SATELLITE_MODEL_URI = "/pictures/tdrs.glb";
 const SATELLITE_LEO_PROXY_ICON_URI = "/pictures/satellite-leo.svg";
 const SATELLITE_LEO_ACTIVE_PROXY_ICON_URI = "/pictures/satellite-leo-active.svg";
 const SATELLITE_GEO_PROXY_ICON_URI = "/pictures/satellite-geo.svg";
@@ -73,14 +79,12 @@ const SATELLITE_LEO_PROXY_WIDTH_PX = 54;
 const SATELLITE_LEO_PROXY_HEIGHT_PX = 36;
 const SATELLITE_GEO_PROXY_WIDTH_PX = 42;
 const SATELLITE_GEO_PROXY_HEIGHT_PX = 28;
-const AIRCRAFT_MODEL_URI = "/pictures/aircraft-v1.glb";
 // aircraft-v1 的机头为 glTF +X，经 Cesium 默认轴转换后为局部 +Y。
 // 绕局部 Z 轴旋转 -90°，让机头对齐速度朝向使用的 +X。
 const AIRCRAFT_MODEL_ORIENTATION_OFFSET = Cesium.Quaternion.fromAxisAngle(
   Cesium.Cartesian3.UNIT_Z,
   -Cesium.Math.PI_OVER_TWO,
 );
-const GROUND_STATION_MODEL_URI = "/pictures/radar.glb";
 const SATELLITE_MODEL_SILHOUETTE_COLOR = Cesium.Color.fromCssColorString("#ffe7a3");
 // 飞机尺寸集中配置：scale 控制物理模型大小，近/远像素值控制地图缩放时的视觉尺寸。
 const DEFAULT_AIRCRAFT_MODEL_SCALE = 90;
@@ -366,7 +370,7 @@ function ensureModel(entity, uri, defaults) {
     });
   }
   // Always force the URI so CZML-provided models get the correct file.
-  entity.model.uri = new Cesium.ConstantProperty(uri);
+  entity.model.uri = new Cesium.ConstantProperty(getSceneModelUri(uri));
 }
 
 function applySatelliteModel(entity, options) {
@@ -2286,9 +2290,16 @@ export async function loadSatsimScenario({
   startAnimating = true,
   onSimulationTick = null,
 }) {
-  const czmlPayload = await ensureLoadedData(czmlSource, "CZML");
-  // bundle.json 才是 topology / route / 指标的真实来源。
-  const bundlePayload = await ensureLoadedData(bundleSource, "satsim bundle JSON");
+  // 数据与模型并行下载；复用首页已经完成或仍在进行的模型请求。
+  // 副屏平面图不下载模型，bundle.json 仍是业务数据的真实来源。
+  const [czmlPayload, bundlePayload] = await Promise.all([
+    ensureLoadedData(czmlSource, "CZML"),
+    ensureLoadedData(bundleSource, "satsim bundle JSON"),
+    ...(miniMode ? [] : [
+      preloadSceneModel(AIRCRAFT_MODEL_URI),
+      preloadSceneModel(GROUND_STATION_MODEL_URI),
+    ]),
+  ]);
   if (!isValidBundlePayload(bundlePayload)) {
     throw new Error("Invalid satsim bundle payload.");
   }

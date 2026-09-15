@@ -220,6 +220,7 @@ import * as Cesium from "cesium";
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import loadSatsimScenario from "../lib/loadSatsimScenario";
+import { AIRCRAFT_MODEL_URI, SATELLITE_MODEL_URI, GROUND_STATION_PREVIEW_MODEL_URI, getSceneModelUri } from "../lib/sceneModelAssets";
 import { getScenarioRecordSync, listRunnableScenarioRecords, refreshServerScenarioRecords, resolveScenarioRuntime } from "../lib/runtimeScenarioCatalog";
 import { fetchServerScenario } from "../lib/simulationAdapter";
 import { getAirportByCode } from "../lib/airportCatalog";
@@ -242,7 +243,6 @@ import "../Widgets/widgets.css";
 /** 仿真时间与真实时间之比（对应 Cesium clock.multiplier） */
 const PLAYBACK_SPEED_OPTIONS = [1, 2, 5, 10];
 const DEFAULT_PLAYBACK_MULTIPLIER = 5;
-const EARTH_SIDEREAL_DAY_SEC = 86164;
 const SATELLITE_DOUBLE_CLICK_RADIUS_PX = 30;
 // 相机高度显示开关：true 为显示，false 为关闭。
 const SHOW_CAMERA_HEIGHT = true;
@@ -301,14 +301,12 @@ const showLinkCapacityPanel = computed(() => (
 
 // ============= Cesium 相关 =============
 let viewer = null;                                                    // 主 3D 视图
-let removeAutoRotate = null;                                          // 地球自转销毁函数
 let removeSceneFillLight = null;                                      // 相机补光销毁函数
 let removeCameraHeightDisplay = null;
 let removeImageryNetworkSync = null;
 let removeImageryFallback = null;
 let removeCapitalLabels = null;
 let removeScreenSyncTick = null;                                      // 屏幕同步销毁函数
-let lastRotateTime = null;                                            // 上次自转计算时刻
 let mainScenarioHandle = null;                                        // 主屏场景加载句柄
 let screenSyncChannel = null;                                         // 副屏同步通道
 let mainScreenExitBroadcasted = false;                                // 避免退出消息重复发送
@@ -624,11 +622,11 @@ function buildSelectedEntityInfo(entityId) {
     id: entityId,
     nodeType,
     typeLabel: nodeTypeLabel(nodeType),
-    modelSrc: nodeType === "aircraft"
-      ? "/pictures/aircraft-v1.glb"
+    modelSrc: getSceneModelUri(nodeType === "aircraft"
+      ? AIRCRAFT_MODEL_URI
       : nodeType === "ground_station"
-      ? "/pictures/ground-station.glb"
-      : "/pictures/tdrs.glb",
+      ? GROUND_STATION_PREVIEW_MODEL_URI
+      : SATELLITE_MODEL_URI),
     longitudeText: location ? `${location.lonDeg.toFixed(4)}°` : "--",
     latitudeText: location ? `${location.latDeg.toFixed(4)}°` : "--",
     altitudeText: location ? `${location.altKm.toFixed(2)} km` : "--",
@@ -988,34 +986,6 @@ function bindCameraHeightDisplay() {
 
 
 /**
- * 绑定地球自转动画
- * 根据仿真播放速度，自动旋转相机以模拟地球自转
- * 旋转角速度随 clock.multiplier 变化，与仿真倍率一致
- */
-function bindAutoRotate() {
-  const earthRate = (2 * Math.PI) / EARTH_SIDEREAL_DAY_SEC;
-  const onTick = (clock) => {
-    if (!viewer || viewer.isDestroyed()) return;
-
-    if (!lastRotateTime) {
-      lastRotateTime = Cesium.JulianDate.clone(clock.currentTime);
-      return;
-    }
-
-    const deltaSeconds = Cesium.JulianDate.secondsDifference(clock.currentTime, lastRotateTime);
-    Cesium.JulianDate.clone(clock.currentTime, lastRotateTime);
-    viewer.scene.camera.rotate(
-      Cesium.Cartesian3.UNIT_Z,
-      -earthRate * clock.multiplier * deltaSeconds,
-    );
-  };
-
-  viewer.clock.onTick.addEventListener(onTick);
-  removeAutoRotate = () => viewer.clock.onTick.removeEventListener(onTick);
-}
-
-
-/**
  * 规范化相对时间
  * 计算当前时刻距仿真起始时刻的秒数
  * 支持循环播放：若超过仿真时长，返回模运算结果
@@ -1356,7 +1326,7 @@ function waitForAircraftModelsReady() {
         boundingSphere,
       ));
       if (states.some((state) => state === Cesium.BoundingSphereState.FAILED)) {
-        finish(new Error("飞机模型加载失败，请检查 /pictures/aircraft-v5.glb。"));
+        finish(new Error(`飞机模型加载失败，请检查 ${AIRCRAFT_MODEL_URI}。`));
         return;
       }
       if (states.every((state) => state === Cesium.BoundingSphereState.DONE)) {
@@ -1401,7 +1371,6 @@ function cleanupScenarioHandles() {
  * 清理事件监听、句柄、viewer 实例
  */
 function destroyAllScenes() {
-  if (removeAutoRotate) removeAutoRotate();
   if (removeSceneFillLight) removeSceneFillLight();
   if (removeCameraHeightDisplay) removeCameraHeightDisplay();
   if (removeImageryNetworkSync) {
@@ -1434,10 +1403,8 @@ function destroyAllScenes() {
   if (viewer && !viewer.isDestroyed()) viewer.destroy();
 
   viewer = null;
-  removeAutoRotate = null;
   removeSceneFillLight = null;
   cameraHeightText.value = "--";
-  lastRotateTime = null;
 }
 
 
@@ -1480,7 +1447,7 @@ async function initializeMainScene() {
     miniMode: false,
     showCoverage: true,
     showLabels: true,
-    // 主地图未选中卫星使用批量化 SVG 代理；高精 tdrs.glb 仍由既有详情视图按需加载。
+    // 主地图未选中卫星使用批量化 SVG 代理；压缩卫星模型由详情视图按需加载。
     showSatelliteModel: false,
     satelliteModelPoolEnabled: false,
     maxAircraft: 30,
@@ -1522,7 +1489,6 @@ async function initializeMainScene() {
   coverageWarning.value = mainScenarioHandle.coverageWarning;
 
   bindEntityPickHandler();
-  bindAutoRotate();
   bindScreenSyncTick();
   applyPlaybackToViewers();
   setInitialOverview();
