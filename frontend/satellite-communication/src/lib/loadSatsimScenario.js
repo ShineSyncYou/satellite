@@ -74,6 +74,12 @@ const SATELLITE_LEO_PROXY_HEIGHT_PX = 36;
 const SATELLITE_GEO_PROXY_WIDTH_PX = 42;
 const SATELLITE_GEO_PROXY_HEIGHT_PX = 28;
 const AIRCRAFT_MODEL_URI = "/pictures/aircraft-v1.glb";
+// aircraft-v1 的机头为 glTF +X，经 Cesium 默认轴转换后为局部 +Y。
+// 绕局部 Z 轴旋转 -90°，让机头对齐速度朝向使用的 +X。
+const AIRCRAFT_MODEL_ORIENTATION_OFFSET = Cesium.Quaternion.fromAxisAngle(
+  Cesium.Cartesian3.UNIT_Z,
+  -Cesium.Math.PI_OVER_TWO,
+);
 const GROUND_STATION_MODEL_URI = "/pictures/radar.glb";
 const SATELLITE_MODEL_SILHOUETTE_COLOR = Cesium.Color.fromCssColorString("#ffe7a3");
 // 飞机尺寸集中配置：scale 控制物理模型大小，近/远像素值控制地图缩放时的视觉尺寸。
@@ -149,6 +155,7 @@ function createStableAircraftOrientation(position) {
 
     const orientation = velocityOrientation.getValue(time, result);
     if (Cesium.defined(orientation)) {
+      Cesium.Quaternion.multiply(orientation, AIRCRAFT_MODEL_ORIENTATION_OFFSET, orientation);
       lastOrientation = Cesium.Quaternion.clone(orientation, lastOrientation);
       return orientation;
     }
@@ -308,7 +315,7 @@ function normalizeBundle(bundle, options) {
   };
 }
 
-function applyViewerClock(viewer, dataSource, bundle, playbackMultiplier) {
+function applyViewerClock(viewer, dataSource, bundle, playbackMultiplier, startAnimating) {
   const effectiveMultiplier = Number(playbackMultiplier);
   if (dataSource.clock) {
     viewer.clock.startTime = cloneTime(dataSource.clock.startTime);
@@ -316,7 +323,7 @@ function applyViewerClock(viewer, dataSource, bundle, playbackMultiplier) {
     viewer.clock.currentTime = cloneTime(dataSource.clock.currentTime);
     viewer.clock.clockRange = dataSource.clock.clockRange;
     viewer.clock.multiplier = effectiveMultiplier;
-    viewer.clock.shouldAnimate = true;
+    viewer.clock.shouldAnimate = startAnimating;
     viewer.clockTrackedDataSource = dataSource;
     return;
   }
@@ -333,7 +340,7 @@ function applyViewerClock(viewer, dataSource, bundle, playbackMultiplier) {
   viewer.clock.currentTime = cloneTime(startTime);
   viewer.clock.clockRange = Cesium.ClockRange.LOOP_STOP;
   viewer.clock.multiplier = effectiveMultiplier;
-  viewer.clock.shouldAnimate = true;
+  viewer.clock.shouldAnimate = startAnimating;
 }
 
 function pruneInvisibleEntities(dataSource, visibleNodeIds) {
@@ -2276,6 +2283,7 @@ export async function loadSatsimScenario({
   maxGroundStations = 1,
   showTopologyLinks = true,
   playbackMultiplier = 6,
+  startAnimating = true,
   onSimulationTick = null,
 }) {
   const czmlPayload = await ensureLoadedData(czmlSource, "CZML");
@@ -2291,7 +2299,7 @@ export async function loadSatsimScenario({
   const dataSource = await Cesium.CzmlDataSource.load(czmlPayload);
   await viewer.dataSources.add(dataSource);
   pruneInvisibleEntities(dataSource, bundle.visibleNodeIds);
-  applyViewerClock(viewer, dataSource, bundle, playbackMultiplier);
+  applyViewerClock(viewer, dataSource, bundle, playbackMultiplier, startAnimating);
   styleEntities(dataSource, bundle, {
     viewer,
     miniMode,

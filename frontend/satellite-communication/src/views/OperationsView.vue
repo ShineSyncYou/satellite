@@ -14,14 +14,14 @@
 
     <div class="tool-bar">
       <div class="toolbar-actions">
-        <button class="tool-btn" :disabled="isScenarioSwitching" @click="goBackToLanding">返回首页</button>
-        <button class="tool-btn" :disabled="isScenarioSwitching" @click="flyToChina">中国居中</button>
-        <button class="tool-btn" :disabled="isScenarioSwitching" @click="openMetricsScreen">打开参数副屏</button>
+        <button class="tool-btn" @click="goBackToLanding">返回首页</button>
+        <button class="tool-btn" @click="flyToChina">中国居中</button>
+        <button class="tool-btn" @click="openMetricsScreen">打开参数副屏</button>
         <button
           type="button"
           class="tool-btn topology-toggle-btn"
           :class="{ active: topologyLinksVisible }"
-          :disabled="isScenarioSwitching || sceneLoading || sceneEmpty"
+          :disabled="sceneEmpty"
           :aria-pressed="topologyLinksVisible"
           :title="topologyLinksVisible ? '隐藏灰色星间拓扑线' : '显示灰色星间拓扑线'"
           @click="toggleTopologyLinks"
@@ -33,7 +33,7 @@
     </div>
 
     <div class="playback-group" aria-label="仿真播放">
-      <button type="button" class="tool-btn" :disabled="isScenarioSwitching" @click="togglePlaybackPause">
+      <button type="button" class="tool-btn" :disabled="isScenarioSwitching || sceneLoading" @click="togglePlaybackPause">
         {{ playbackPaused ? "播放" : "暂停" }}
       </button>
       <span class="playback-time">{{ playbackCurrentTimeText }}</span>
@@ -44,7 +44,7 @@
         :max="playbackDurationS"
         step="0.1"
         :value="playbackProgressValue"
-        :disabled="isScenarioSwitching || playbackDurationS <= 0"
+        :disabled="isScenarioSwitching || sceneLoading || playbackDurationS <= 0"
         aria-label="仿真播放进度"
         @input="onPlaybackProgressInput"
         @change="onPlaybackProgressChange"
@@ -52,7 +52,7 @@
       <span class="playback-time playback-time--duration">{{ playbackDurationText }}</span>
       <label class="playback-label" for="playbackSpeedSelect">速率</label>
       <div id="playbackSpeedSelect" class="scenario-select custom-select" :class="{ open: isSpeedMenuOpen }">
-        <button type="button" class="custom-select-trigger" :disabled="isScenarioSwitching" @click="toggleSpeedMenu">
+        <button type="button" class="custom-select-trigger" :disabled="isScenarioSwitching || sceneLoading" @click="toggleSpeedMenu">
           {{ selectedPlaybackSpeedLabel }}
         </button>
         <ul v-show="isSpeedMenuOpen" class="custom-select-menu custom-select-menu--up">
@@ -784,24 +784,31 @@ function onPlaybackSpeedInput() {
 }
 
 function togglePlaybackPause() {
-  if (isScenarioSwitching.value) return;
+  if (isScenarioSwitching.value || sceneLoading.value) return;
   playbackPaused.value = !playbackPaused.value;
   applyPlaybackToViewers();
 }
 
 function toggleTopologyLinks() {
-  if (isScenarioSwitching.value || sceneLoading.value || sceneEmpty.value) return;
+  if (sceneEmpty.value) return;
   const nextVisible = !topologyLinksVisible.value;
   const appliedVisible = mainScenarioHandle?.setTopologyLinksVisible?.(nextVisible);
   topologyLinksVisible.value = typeof appliedVisible === "boolean" ? appliedVisible : nextVisible;
 }
 
+function setSceneCameraInputsEnabled(enabled) {
+  if (!viewer || viewer.isDestroyed()) return;
+  viewer.scene.screenSpaceCameraController.enableInputs = enabled;
+}
+
 function onPlaybackProgressInput(event) {
+  if (isScenarioSwitching.value || sceneLoading.value) return;
   isPlaybackScrubbing.value = true;
   playbackSeekPreviewS.value = clampPlaybackTime(event?.target?.value);
 }
 
 function onPlaybackProgressChange(event) {
+  if (isScenarioSwitching.value || sceneLoading.value) return;
   const targetTimeS = clampPlaybackTime(event?.target?.value);
   playbackSeekPreviewS.value = targetTimeS;
 
@@ -825,13 +832,13 @@ function closeToolbarMenus() {
 }
 
 function toggleSpeedMenu() {
-  if (isScenarioSwitching.value) return;
+  if (isScenarioSwitching.value || sceneLoading.value) return;
   isSpeedMenuOpen.value = !isSpeedMenuOpen.value;
 }
 
 function choosePlaybackSpeed(nextSpeed) {
   closeToolbarMenus();
-  if (isScenarioSwitching.value || Number(nextSpeed) === playbackMultiplier.value) return;
+  if (isScenarioSwitching.value || sceneLoading.value || Number(nextSpeed) === playbackMultiplier.value) return;
   playbackMultiplier.value = Number(nextSpeed);
   onPlaybackSpeedInput();
 }
@@ -1469,6 +1476,7 @@ async function initializeMainScene() {
   currentScenarioRuntime.value = await resolveScenarioRuntime(selectedScenario.value);
 
   createViewer();
+  setSceneCameraInputsEnabled(false);
   sceneLoadingText.value = "正在构建三维场景...";
 
   mainScenarioHandle = await loadSatsimScenario({
@@ -1485,6 +1493,7 @@ async function initializeMainScene() {
     maxGroundStations: 1,
     showTopologyLinks: topologyLinksVisible.value,
     playbackMultiplier: playbackMultiplier.value,
+    startAnimating: false,
     onSimulationTick: ({ relativeTimeS, activeTopology, activeRoutes }) => {
       latestRelativeTimeS = Number(relativeTimeS) || 0;
       if (!isPlaybackScrubbing.value) {
@@ -1524,6 +1533,7 @@ async function initializeMainScene() {
   applyPlaybackToViewers();
   setInitialOverview();
   broadcastSnapshot();
+  setSceneCameraInputsEnabled(true);
   sceneLoading.value = false;
 }
 
@@ -1661,8 +1671,11 @@ onBeforeUnmount(() => {
 
 .scene-loading-mask {
   position: absolute;
-  inset: 0;
-  z-index: 18;
+  top: 64px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 25;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1670,6 +1683,7 @@ onBeforeUnmount(() => {
     radial-gradient(circle at 50% 30%, rgba(43, 103, 168, 0.28), transparent 48%),
     linear-gradient(180deg, rgba(4, 12, 24, 0.3), rgba(4, 12, 24, 0.68));
   backdrop-filter: blur(3px);
+  pointer-events: none;
 }
 
 .scene-loading-mask--error {
@@ -1709,7 +1723,7 @@ onBeforeUnmount(() => {
   align-items: flex-end;
   gap: 8px;
   max-width: calc(100vw - 24px);
-  z-index: 20;
+  z-index: 30;
 }
 
 .toolbar-actions {
@@ -2292,6 +2306,10 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 1400px) {
+  .scene-loading-mask {
+    top: 132px;
+  }
+
   .tool-bar {
     top: 78px;
   }
