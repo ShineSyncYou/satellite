@@ -365,12 +365,20 @@ function pruneInvisibleEntities(dataSource, visibleNodeIds) {
 function ensureModel(entity, uri, defaults) {
   if (!entity.model) {
     entity.model = new Cesium.ModelGraphics({
-      uri,
       ...defaults,
     });
   }
-  // Always force the URI so CZML-provided models get the correct file.
-  entity.model.uri = new Cesium.ConstantProperty(getSceneModelUri(uri));
+  const model = entity.model;
+  const cachedUri = getSceneModelUri(uri);
+  // 下载尚未完成时先留空 URI，页面照常进入；完成后再交给 Cesium 解析。
+  // 复用首页的进行中请求，避免 Cesium 同时重复下载同一个模型。
+  const modelUri = new Cesium.ConstantProperty(cachedUri !== uri ? cachedUri : undefined);
+  model.uri = modelUri;
+  if (cachedUri !== uri) return;
+  void preloadSceneModel(uri).then((loadedUri) => {
+    // 模型池或实体选择可能已经替换了此模型，不回写过期的绑定。
+    if (entity.model === model && model.uri === modelUri) modelUri.setValue(loadedUri);
+  });
 }
 
 function applySatelliteModel(entity, options) {
@@ -2290,15 +2298,15 @@ export async function loadSatsimScenario({
   startAnimating = true,
   onSimulationTick = null,
 }) {
-  // 数据与模型并行下载；复用首页已经完成或仍在进行的模型请求。
-  // 副屏平面图不下载模型，bundle.json 仍是业务数据的真实来源。
+  // 模型在后台下载，不参与场景初始化的等待；副屏平面图不下载模型。
+  if (!miniMode) {
+    void preloadSceneModel(AIRCRAFT_MODEL_URI);
+    void preloadSceneModel(GROUND_STATION_MODEL_URI);
+  }
+  // 只等待渲染数据和业务数据，模型就绪后通过属性更新自行显示。
   const [czmlPayload, bundlePayload] = await Promise.all([
     ensureLoadedData(czmlSource, "CZML"),
     ensureLoadedData(bundleSource, "satsim bundle JSON"),
-    ...(miniMode ? [] : [
-      preloadSceneModel(AIRCRAFT_MODEL_URI),
-      preloadSceneModel(GROUND_STATION_MODEL_URI),
-    ]),
   ]);
   if (!isValidBundlePayload(bundlePayload)) {
     throw new Error("Invalid satsim bundle payload.");

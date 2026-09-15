@@ -884,6 +884,8 @@ function createViewer() {
     moon: false,            // 关闭月亮
   });
 
+  // 模型后台加载或解析时，允许页面正常播放仿真。
+  viewer.allowDataSourcesToSuspendAnimation = false;
   viewer.scene.globe.enableLighting = false;
   viewer.scene.fxaa = true;
   viewer.cesiumWidget.creditContainer.style.display = "none";
@@ -1283,66 +1285,6 @@ function setInitialOverview() {
 }
 
 /**
- * 等待主屏中所有飞机实体的 GLB 完成解析并可渲染。
- * DataSourceDisplay 会将模型仍在加载的实体标记为 PENDING，只有模型首帧就绪后才返回 DONE。
- */
-function waitForAircraftModelsReady() {
-  if (!viewer || viewer.isDestroyed() || !mainScenarioHandle) {
-    return Promise.reject(new Error("飞机模型加载前场景已被销毁。"));
-  }
-
-  const aircraftEntities = [...mainScenarioHandle.bundle.visibleNodeIds]
-    .filter((nodeId) => mainScenarioHandle.bundle.nodeTypeMap.get(nodeId) === "aircraft")
-    .map((nodeId) => mainScenarioHandle.entityLookup.get(nodeId))
-    .filter(Boolean);
-  if (aircraftEntities.length === 0) {
-    return Promise.resolve();
-  }
-
-  return new Promise((resolve, reject) => {
-    const boundingSphere = new Cesium.BoundingSphere();
-    let settled = false;
-
-    const finish = (error) => {
-      if (settled) return;
-      settled = true;
-      viewer?.scene?.postRender.removeEventListener(checkReady);
-      if (error) {
-        reject(error);
-      } else {
-        resolve();
-      }
-    };
-
-    const checkReady = () => {
-      if (!viewer || viewer.isDestroyed()) {
-        finish(new Error("飞机模型加载期间场景已被销毁。"));
-        return;
-      }
-
-      const states = aircraftEntities.map((entity) => viewer.dataSourceDisplay.getBoundingSphere(
-        entity,
-        false,
-        boundingSphere,
-      ));
-      if (states.some((state) => state === Cesium.BoundingSphereState.FAILED)) {
-        finish(new Error(`飞机模型加载失败，请检查 ${AIRCRAFT_MODEL_URI}。`));
-        return;
-      }
-      if (states.every((state) => state === Cesium.BoundingSphereState.DONE)) {
-        finish();
-        return;
-      }
-      viewer.scene.requestRender();
-    };
-
-    viewer.scene.postRender.addEventListener(checkReady);
-    viewer.scene.requestRender();
-  });
-}
-
-
-/**
  * 打开链路参数副屏
  * 如果弹窗被浏览器阻止，降级为普通新标签页
  */
@@ -1467,8 +1409,7 @@ async function initializeMainScene() {
       }
     },
   });
-  sceneLoadingText.value = "正在加载飞机模型...";
-  await waitForAircraftModelsReady();
+  // 场景数据就绪即可进入，飞机、地面站模型继续在后台下载和解析。
   playbackDurationS.value = Math.max(0, Number(mainScenarioHandle.bundle.durationSeconds) || 0);
   scenarioLinkCapacities.value = mainScenarioHandle.bundle.metadata?.link_capacities || null;
   playbackCurrentTimeS.value = clampPlaybackTime(latestRelativeTimeS);
