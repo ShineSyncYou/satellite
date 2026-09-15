@@ -796,11 +796,6 @@ function toggleTopologyLinks() {
   topologyLinksVisible.value = typeof appliedVisible === "boolean" ? appliedVisible : nextVisible;
 }
 
-function setSceneCameraInputsEnabled(enabled) {
-  if (!viewer || viewer.isDestroyed()) return;
-  viewer.scene.screenSpaceCameraController.enableInputs = enabled;
-}
-
 function onPlaybackProgressInput(event) {
   if (isScenarioSwitching.value || sceneLoading.value) return;
   isPlaybackScrubbing.value = true;
@@ -1476,7 +1471,6 @@ async function initializeMainScene() {
   currentScenarioRuntime.value = await resolveScenarioRuntime(selectedScenario.value);
 
   createViewer();
-  setSceneCameraInputsEnabled(false);
   sceneLoadingText.value = "正在构建三维场景...";
 
   mainScenarioHandle = await loadSatsimScenario({
@@ -1533,7 +1527,6 @@ async function initializeMainScene() {
   applyPlaybackToViewers();
   setInitialOverview();
   broadcastSnapshot();
-  setSceneCameraInputsEnabled(true);
   sceneLoading.value = false;
 }
 
@@ -1671,11 +1664,8 @@ onBeforeUnmount(() => {
 
 .scene-loading-mask {
   position: absolute;
-  top: 64px;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 25;
+  inset: 0;
+  z-index: 18;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1683,7 +1673,6 @@ onBeforeUnmount(() => {
     radial-gradient(circle at 50% 30%, rgba(43, 103, 168, 0.28), transparent 48%),
     linear-gradient(180deg, rgba(4, 12, 24, 0.3), rgba(4, 12, 24, 0.68));
   backdrop-filter: blur(3px);
-  pointer-events: none;
 }
 
 .scene-loading-mask--error {
@@ -1723,7 +1712,7 @@ onBeforeUnmount(() => {
   align-items: flex-end;
   gap: 8px;
   max-width: calc(100vw - 24px);
-  z-index: 30;
+  z-index: 20;
 }
 
 .toolbar-actions {
@@ -2306,10 +2295,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 1400px) {
-  .scene-loading-mask {
-    top: 132px;
-  }
-
   .tool-bar {
     top: 78px;
   }

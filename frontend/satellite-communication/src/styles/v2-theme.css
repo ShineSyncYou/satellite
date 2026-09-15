@@ -964,11 +964,6 @@ code {
   accent-color: var(--v2-primary);
 }
 
-.scene-root .tool-bar,
-.scene-root .platform-title {
-  z-index: 12;
-}
-
 .scene-root .entity-info-panel {
   z-index: 20;
 }
