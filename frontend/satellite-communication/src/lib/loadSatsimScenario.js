@@ -88,16 +88,16 @@ const AIRCRAFT_MODEL_ORIENTATION_OFFSET = Cesium.Quaternion.fromAxisAngle(
 const SATELLITE_MODEL_SILHOUETTE_COLOR = Cesium.Color.fromCssColorString("#ffe7a3");
 // 飞机尺寸集中配置：scale 控制物理模型大小，近/远像素值控制地图缩放时的视觉尺寸。
 const DEFAULT_AIRCRAFT_MODEL_SCALE = 90;
-const DEFAULT_AIRCRAFT_MODEL_MIN_PIXEL_SIZE = 64;
-// 仅控制近景端点：1.45 表示近景尺寸为远景尺寸的 1.45 倍，远景尺寸不受影响。
+const DEFAULT_AIRCRAFT_MODEL_MIN_PIXEL_SIZE = 70;
+// 仅控制近景端点：近景尺寸为 9000 km 分界尺寸的 2.5 倍。
 const AIRCRAFT_SIZE_NEAR_MULTIPLIER = 2.5;
 const DEFAULT_AIRCRAFT_MODEL_NEAR_PIXEL_SIZE =
   DEFAULT_AIRCRAFT_MODEL_MIN_PIXEL_SIZE * AIRCRAFT_SIZE_NEAR_MULTIPLIER;
 const DEFAULT_AIRCRAFT_MODEL_MAXIMUM_SCALE = 90000;
-// 在 50 km～5000 km 内按对数高度平滑插值，匹配地图的指数缩放手感。
+// 在 50 km～9000 km 内按对数高度平滑插值；更远时随地球投影同比缩小。
 const AIRCRAFT_SIZE_NEAR_CAMERA_HEIGHT_M = 50000;
 const AIRCRAFT_SIZE_FAR_CAMERA_HEIGHT_M = 9000000;
-const GROUND_STATION_MODEL_MIN_PIXEL_SIZE = 38;
+const GROUND_STATION_MODEL_MIN_PIXEL_SIZE = 50;
 // 超过 5000 km 后按高度反比缩小 minimumPixelSize，固定地面站的世界尺度。
 const GROUND_STATION_SCALE_FREEZE_CAMERA_HEIGHT_M = 5000000;
 
@@ -174,6 +174,17 @@ function aircraftMinPixelSizeForCamera(viewer, nearPixelSize, farPixelSize) {
   const cameraHeight = Number(viewer?.camera?.positionCartographic?.height);
   if (!Number.isFinite(cameraHeight)) {
     return farPixelSize;
+  }
+  if (cameraHeight > AIRCRAFT_SIZE_FAR_CAMERA_HEIGHT_M) {
+    const earthRadius = viewer?.scene?.globe?.ellipsoid?.maximumRadius
+      ?? Cesium.Ellipsoid.WGS84.maximumRadius;
+    // 正对地球、视场角不变时，球体投影直径正比于 1 / sqrt(h * (h + 2R))。
+    // 以 9000 km 时的像素大小为基准，避免远景继续被固定的 64 px 撑大。
+    const referenceHeight = AIRCRAFT_SIZE_FAR_CAMERA_HEIGHT_M;
+    return farPixelSize * Math.sqrt(
+      (referenceHeight * (referenceHeight + 2 * earthRadius))
+      / (cameraHeight * (cameraHeight + 2 * earthRadius)),
+    );
   }
   const clampedHeight = Cesium.Math.clamp(
     cameraHeight,

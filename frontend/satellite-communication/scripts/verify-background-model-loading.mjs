@@ -1,4 +1,4 @@
-// 回归：模型请求未完成/失败时主屏仍可操作，下载结束后可复用缓存。
+// 回归：模型后台加载、失败不阻塞主屏，远景飞机随地球同比缩小。
 // Usage: node scripts/verify-background-model-loading.mjs <tool-directory>
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -63,6 +63,7 @@ try {
     window.__sceneTestModels = [];
     const original = Cesium.Model.fromGltfAsync;
     Cesium.Model.fromGltfAsync = async function(...args) {
+      window.__sceneTestScene = args[0].scene;
       const model = await original.apply(this, args);
       window.__sceneTestModels.push(model);
       return model;
@@ -77,6 +78,24 @@ try {
   assert.equal(pending, 2, '场景与缓存应复用同一次模型下载');
   await page.waitForFunction(() => window.__sceneTestModels?.filter(model => model.ready).length >= 2, {}, { timeout: 30000 });
   console.log('PASS: 放行后两种模型进入缓存并完成 Cesium 渲染准备，未重复请求');
+  const aircraftSizes = await page.evaluate(async () => {
+    const url = performance.getEntriesByType('resource').find(entry => /\/deps\/cesium\.js/.test(entry.name)).name;
+    const Cesium = await import(url);
+    const scene = window.__sceneTestScene;
+    const aircraft = window.__sceneTestModels.find(model => model.id?.id === 'AC_1');
+    const sizes = [];
+    for (const height of [50000, 8999999, 9000000, 9000001, 18000000, 90000000]) {
+      scene.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(110, 30, height),
+        orientation: { heading: 0, pitch: -Cesium.Math.PI_OVER_TWO, roll: 0 } });
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      sizes.push({ height, minimumPixelSize: aircraft.minimumPixelSize });
+    }
+    return sizes;
+  });
+  const expectedSizes = [160, 64, 64, 64, 38.061892, 9.312538];
+  aircraftSizes.forEach((sample, index) => assert.ok(Math.abs(sample.minimumPixelSize - expectedSizes[index]) < 0.001,
+    `相机高度 ${sample.height}：实际 ${sample.minimumPixelSize} px`));
+  console.log('PASS: 9000 km 分界连续，18000 km 约 38 px、90000 km 约 9 px', aircraftSizes);
   await page.close();
 
   const failed = await context.newPage();
